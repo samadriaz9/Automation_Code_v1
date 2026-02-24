@@ -1,17 +1,21 @@
 import RPi.GPIO as GPIO
 import time
+import smbus
 
 # Media Dispenser motor pins (same as stepper.py)
 STEP_PIN = 18   # CLK+
 DIR_PIN = 23    # CW+
 EN_PIN = 24     # EN+
 
-# No limit switches for this motor
+# PCF8574 I2C expander (limit switch on P0)
+PCF8574_ADDRESS = 0x20  # Adjust if your module uses a different address
 
 delay = 0.001   # speed control (same as stepper.py)
 
-# One-time GPIO setup for this module
+# One-time GPIO / I2C setup for this module
 _initialized = False
+_i2c_initialized = False
+_bus = None
 
 
 def _ensure_gpio():
@@ -24,6 +28,23 @@ def _ensure_gpio():
         GPIO.setup(EN_PIN, GPIO.OUT)
         GPIO.output(EN_PIN, GPIO.LOW)  # Enable motor (LOW = enable)
         _initialized = True
+
+
+def _ensure_i2c():
+    """Initialize I2C bus and PCF8574 (once)."""
+    global _i2c_initialized, _bus
+    if not _i2c_initialized:
+        _bus = smbus.SMBus(1)  # I2C bus 1 on Raspberry Pi
+        # Configure all P0–P7 as inputs with internal pull-ups (write 1s)
+        _bus.write_byte(PCF8574_ADDRESS, 0xFF)
+        _i2c_initialized = True
+
+
+def _read_p0():
+    """Read state of P0 from PCF8574 (returns 0 or 1)."""
+    _ensure_i2c()
+    value = _bus.read_byte(PCF8574_ADDRESS)
+    return value & 0x01  # bit 0 is P0
 
 
 def _step(steps, direction_high):
@@ -49,11 +70,42 @@ def Media_Disperensor_down(steps):
     _step(steps, direction_high=False)
 
 
+def media_dispensor_config():
+    """
+    Drive the media dispenser motor DOWN until the limit switch on P0 is pressed.
+
+    Assumes P0 is pulled HIGH normally and goes LOW (0) when the switch is pressed.
+    """
+    print("Media Dispenser: homing DOWN until P0 limit switch (PCF8574) is pressed")
+    _ensure_gpio()
+    _ensure_i2c()
+
+    # Set direction for DOWN (same as Media_Disperensor_down)
+    GPIO.output(DIR_PIN, GPIO.LOW)
+
+    while True:
+        p0 = _read_p0()
+        if p0 == 0:
+            print("P0 limit switch detected, stopping.")
+            break
+
+        GPIO.output(STEP_PIN, GPIO.HIGH)
+        time.sleep(delay)
+        GPIO.output(STEP_PIN, GPIO.LOW)
+        time.sleep(delay)
+
+
 def cleanup():
     """Disable motor and release GPIO. Call when done with dispenser."""
-    global _initialized
+    global _initialized, _i2c_initialized, _bus
     if _initialized:
         GPIO.output(EN_PIN, GPIO.HIGH)
-        # Only cleanup if this module did the setup (optional: skip if stepper.py also uses GPIO)
-        # GPIO.cleanup()
         _initialized = False
+    if _i2c_initialized and _bus is not None:
+        try:
+            _bus.close()
+        except AttributeError:
+            # smbus on some systems may not have close()
+            pass
+        _i2c_initialized = False
+        _bus = None
