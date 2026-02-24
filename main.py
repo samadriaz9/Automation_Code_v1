@@ -9,7 +9,7 @@ import RPi.GPIO as GPIO
 
 try:
     Media_Disperensor_up(1000)   # 1000 steps up
-    Media_Disperensor_down(500)  # 500 steps down
+    #Media_Disperensor_down(100)  # 500 steps down
 finally:
     cleanup()
     GPIO.cleanup()
