@@ -11,14 +11,16 @@ from media_dispenser import (
     cleanup,
 )
 import RPi.GPIO as GPIO
-
+import time
 try:
     # First: move down until limit switch on P0 (PCF8574) is pressed
     media_dispensor_config()
-
     # Then run fixed-step movements
-    Media_Disperensor_up(1000)   # 1000 steps up
-    Media_Disperensor_down(500)  # 500 steps down
+    Media_Disperensor_up(2600)   # 1000 steps up
+    Media_Disperensor_down(800)
+    for i in range(5):
+        Media_Disperensor_down(520)
+        time.sleep(5)   # 500 steps down
 finally:
     cleanup()
     GPIO.cleanup()
