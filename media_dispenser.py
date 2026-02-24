@@ -61,13 +61,15 @@ def _step(steps, direction_high):
 def Media_Disperensor_up(steps):
     """Move media dispenser motor UP by the given number of steps."""
     print(f"Media Dispenser: moving UP {steps} steps")
-    _step(steps, direction_high=True)
+    # For this wiring, DIR LOW corresponds to physical UP
+    _step(steps, direction_high=False)
 
 
 def Media_Disperensor_down(steps):
     """Move media dispenser motor DOWN by the given number of steps."""
     print(f"Media Dispenser: moving DOWN {steps} steps")
-    _step(steps, direction_high=False)
+    # For this wiring, DIR HIGH corresponds to physical DOWN
+    _step(steps, direction_high=True)
 
 
 def media_dispensor_config():
@@ -81,7 +83,7 @@ def media_dispensor_config():
     _ensure_i2c()
 
     # Set direction for DOWN (same as Media_Disperensor_down)
-    GPIO.output(DIR_PIN, GPIO.LOW)
+    GPIO.output(DIR_PIN, GPIO.HIGH)
 
     while True:
         p0 = _read_p0()
