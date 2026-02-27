@@ -30,6 +30,8 @@ from consumable import (
     cleanup as consumable_cleanup,
 )
 from relay_control import (
+    P1,
+    run_relay,
     run_relay_sequence,
     cleanup as relay_cleanup,
 )
@@ -54,7 +56,8 @@ try:
     #Consumable_down(300)
 
     # Relays on second PCF8574: P0..P4 ON for 2 seconds each
-    run_relay_sequence()
+    # run_relay_sequence()
+    run_relay(P1, 2)
 finally:
     # Clean up all modules
     filteration_cleanup()

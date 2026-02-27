@@ -5,6 +5,16 @@ import smbus
 # First board is typically at 0x20; second at 0x21.
 RELAY_PCF8574_ADDRESS = 0x21
 
+# Convenience channel constants (PCF8574 pins)
+P0 = 0
+P1 = 1
+P2 = 2
+P3 = 3
+P4 = 4
+P5 = 5
+P6 = 6
+P7 = 7
+
 # PCF8574 + relay boards are usually ACTIVE-LOW:
 # - Writing bit = 1 -> relay OFF
 # - Writing bit = 0 -> relay ON
@@ -66,6 +76,25 @@ def run_relay_sequence():
         print(f"Relay on P{ch}: OFF")
         set_relay(ch, False)
         time.sleep(0.2)
+
+
+def run_relay(channel: int, seconds: float):
+    """
+    Turn one relay ON for `seconds`, then OFF.
+
+    Example:
+        run_relay(P1, 2)
+    """
+    if seconds < 0:
+        raise ValueError("seconds must be >= 0")
+
+    print(f"Relay on P{channel}: ON for {seconds}s")
+    set_relay(channel, True)
+    try:
+        time.sleep(seconds)
+    finally:
+        print(f"Relay on P{channel}: OFF")
+        set_relay(channel, False)
 
 
 def cleanup():
