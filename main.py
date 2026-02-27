@@ -22,12 +22,12 @@ import time
 
 try:
     # Filteration flask: move down until limit switch on P0 (PCF8574) is pressed
-    #filteration_flask_config()
+    filteration_flask_config()
     #Filteration_flask_up(1150)
 
     # Suction pump: move down until limit switch on P1 (PCF8574) is pressed
     suction_pump_config()
-    Suction_pump_up(1000)
+    #Suction_pump_up(1000)
 finally:
     # Clean up both modules
     filteration_cleanup()
