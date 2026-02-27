@@ -63,14 +63,15 @@ def _step(steps, direction_high):
 def Suction_pump_up(steps):
     """Move suction pump motor UP by the given number of steps."""
     print(f"Suction pump: moving UP {steps} steps")
-    # Adjust direction_high according to your wiring (mirroring filteration if same)
-    _step(steps, direction_high=False)
+    # For this wiring, DIR HIGH corresponds to physical UP
+    _step(steps, direction_high=True)
 
 
 def Suction_pump_down(steps):
     """Move suction pump motor DOWN by the given number of steps."""
     print(f"Suction pump: moving DOWN {steps} steps")
-    _step(steps, direction_high=True)
+    # For this wiring, DIR LOW corresponds to physical DOWN
+    _step(steps, direction_high=False)
 
 
 def suction_pump_config():
@@ -84,7 +85,7 @@ def suction_pump_config():
     _ensure_i2c()
 
     # Set direction for DOWN (same as Suction_pump_down)
-    GPIO.output(DIR_PIN, GPIO.HIGH)
+    GPIO.output(DIR_PIN, GPIO.LOW)
 
     while True:
         p1 = _read_p1()
