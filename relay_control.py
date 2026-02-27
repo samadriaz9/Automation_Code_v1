@@ -1,0 +1,87 @@
+import time
+import smbus
+
+# Second PCF8574 used for relays (cascaded board)
+# First board is typically at 0x20; second at 0x21.
+RELAY_PCF8574_ADDRESS = 0x21
+
+# PCF8574 + relay boards are usually ACTIVE-LOW:
+# - Writing bit = 1 -> relay OFF
+# - Writing bit = 0 -> relay ON
+
+_bus = None
+_initialized = False
+_state = 0xFF  # all relays OFF (all bits high)
+
+
+def _ensure_i2c():
+    """Initialize I2C bus for the relay PCF8574 (once)."""
+    global _bus, _initialized, _state
+    if not _initialized:
+        _bus = smbus.SMBus(1)
+        # Start with all outputs HIGH (relays off)
+        _state = 0xFF
+        _bus.write_byte(RELAY_PCF8574_ADDRESS, _state)
+        _initialized = True
+
+
+def _write_state():
+    """Write current state byte to the relay PCF8574."""
+    _ensure_i2c()
+    _bus.write_byte(RELAY_PCF8574_ADDRESS, _state)
+
+
+def set_relay(channel: int, on: bool):
+    """
+    Turn a single relay ON or OFF.
+
+    channel: 0–7 correspond to P0–P7 on the second PCF8574.
+    on=True  -> relay ON  (bit driven LOW)
+    on=False -> relay OFF (bit driven HIGH)
+    """
+    global _state
+    if not 0 <= channel <= 7:
+        raise ValueError("channel must be between 0 and 7")
+
+    mask = 1 << channel
+    if on:
+        # Active-low: clear bit to drive pin low -> relay ON
+        _state &= ~mask
+    else:
+        # Set bit to 1 -> pin high -> relay OFF
+        _state |= mask
+
+    _write_state()
+
+
+def run_relay_sequence():
+    """
+    Run P0, P1, P2, P3, P4 each ON for 2 seconds, one after another.
+    """
+    _ensure_i2c()
+    for ch in range(5):  # P0..P4
+        print(f"Relay on P{ch}: ON")
+        set_relay(ch, True)
+        time.sleep(2)
+        print(f"Relay on P{ch}: OFF")
+        set_relay(ch, False)
+        time.sleep(0.2)
+
+
+def cleanup():
+    """Turn all relays off and close the I2C bus."""
+    global _bus, _initialized, _state
+    if _initialized and _bus is not None:
+        try:
+            # All OFF
+            _state = 0xFF
+            _bus.write_byte(RELAY_PCF8574_ADDRESS, _state)
+        except Exception:
+            pass
+        try:
+            _bus.close()
+        except AttributeError:
+            pass
+    _bus = None
+    _initialized = False
+

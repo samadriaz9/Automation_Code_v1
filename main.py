@@ -24,6 +24,15 @@ from suction_pump import (
     suction_pump_config,
     cleanup as suction_cleanup,
 )
+from consumable import (
+    Consumable_up,
+    Consumable_down,
+    cleanup as consumable_cleanup,
+)
+from relay_control import (
+    run_relay_sequence,
+    cleanup as relay_cleanup,
+)
 import RPi.GPIO as GPIO
 import time
 
@@ -39,9 +48,18 @@ try:
     # Suction pump: move down until limit switch on P1 (PCF8574) is pressed
     suction_pump_config()
     Suction_pump_up(1000)
+
+    # Consumable: simple up/down movement without limit switch
+    Consumable_up(500)
+    Consumable_down(300)
+
+    # Relays on second PCF8574: P0..P4 ON for 2 seconds each
+    run_relay_sequence()
 finally:
     # Clean up all modules
     filteration_cleanup()
     filteration_unit_cleanup()
     suction_cleanup()
+    consumable_cleanup()
+    relay_cleanup()
     GPIO.cleanup()
