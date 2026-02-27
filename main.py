@@ -1,8 +1,9 @@
 """
-Main script for Filteration Flask and Suction Pump control.
+Main script for Filteration Flask, Filteration Unit and Suction Pump control.
 Runs homing (down until limit switch via PCF8574) and then movements.
 
 Filteration flask uses same pins as stepper.py: STEP=18, DIR=23, EN=24 (BCM).
+Filteration unit uses CLK=13, CW=19, EN=26 (BCM).
 Suction pump uses separate GPIO pins (see suction_pump.py).
 """
 from filteration_flask import (
@@ -10,6 +11,12 @@ from filteration_flask import (
     Filteration_flask_down,
     filteration_flask_config,
     cleanup as filteration_cleanup,
+)
+from filteration_unit import (
+    Filteration_unit_up,
+    Filteration_unit_down,
+    filteration_unit_config,
+    cleanup as filteration_unit_cleanup,
 )
 from suction_pump import (
     Suction_pump_up,
@@ -25,11 +32,16 @@ try:
     filteration_flask_config()
     #Filteration_flask_up(1150)
 
+    # Filteration unit: move down until limit switch on P2 (PCF8574) is pressed
+    filteration_unit_config()
+    #Filteration_unit_up(1000)
+
     # Suction pump: move down until limit switch on P1 (PCF8574) is pressed
     suction_pump_config()
     #Suction_pump_up(1000)
 finally:
-    # Clean up both modules
+    # Clean up all modules
     filteration_cleanup()
+    filteration_unit_cleanup()
     suction_cleanup()
     GPIO.cleanup()
