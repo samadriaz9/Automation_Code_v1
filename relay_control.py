@@ -15,6 +15,16 @@ P5 = 5
 P6 = 6
 P7 = 7
 
+# Convenience relay-number aliases (many relay boards label relays as 1..8)
+RELAY1 = 0
+RELAY2 = 1
+RELAY3 = 2
+RELAY4 = 3
+RELAY5 = 4
+RELAY6 = 5
+RELAY7 = 6
+RELAY8 = 7
+
 # PCF8574 + relay boards are usually ACTIVE-LOW:
 # - Writing bit = 1 -> relay OFF
 # - Writing bit = 0 -> relay ON
