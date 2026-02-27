@@ -16,16 +16,15 @@ try:
     # First: move down until limit switch on P0 (PCF8574) is pressed
     media_dispensor_config()
     # Then run fixed-step movements
-<<<<<<< HEAD
-    Media_Disperensor_up(1000)   # 1000 steps up
+    #Media_Disperensor_up(1000)   # 1000 steps up
     #Media_Disperensor_down(100)  # 500 steps down
-=======
-    Media_Disperensor_up(2600)   # 1000 steps up
-    Media_Disperensor_down(800)
+    Media_Disperensor_up(3500)   # 1000 steps up
+    time.sleep(10)
+    Media_Disperensor_down(900)
+    time.sleep(10)
     for i in range(5):
         Media_Disperensor_down(520)
         time.sleep(5)   # 500 steps down
->>>>>>> a08026ac0b93406709448f38cc634a65032ec90f
 finally:
     cleanup()
     GPIO.cleanup()
