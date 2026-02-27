@@ -2,7 +2,7 @@ import RPi.GPIO as GPIO
 import time
 import smbus
 
-# Media Dispenser motor pins (same as stepper.py)
+# Filteration Flask motor pins (same as stepper.py)
 STEP_PIN = 18   # CLK+
 DIR_PIN = 23    # CW+
 EN_PIN = 24     # EN+
@@ -19,7 +19,7 @@ _bus = None
 
 
 def _ensure_gpio():
-    """Initialize GPIO for media dispenser motor (once)."""
+    """Initialize GPIO for filteration flask motor (once)."""
     global _initialized
     if not _initialized:
         GPIO.setmode(GPIO.BCM)
@@ -58,31 +58,31 @@ def _step(steps, direction_high):
         time.sleep(delay)
 
 
-def Media_Disperensor_up(steps):
-    """Move media dispenser motor UP by the given number of steps."""
-    print(f"Media Dispenser: moving UP {steps} steps")
+def Filteration_flask_up(steps):
+    """Move filteration flask motor UP by the given number of steps."""
+    print(f"Filteration Flask: moving UP {steps} steps")
     # For this wiring, DIR LOW corresponds to physical UP
     _step(steps, direction_high=False)
 
 
-def Media_Disperensor_down(steps):
-    """Move media dispenser motor DOWN by the given number of steps."""
-    print(f"Media Dispenser: moving DOWN {steps} steps")
+def Filteration_flask_down(steps):
+    """Move filteration flask motor DOWN by the given number of steps."""
+    print(f"Filteration Flask: moving DOWN {steps} steps")
     # For this wiring, DIR HIGH corresponds to physical DOWN
     _step(steps, direction_high=True)
 
 
-def media_dispensor_config():
+def filteration_flask_config():
     """
-    Drive the media dispenser motor DOWN until the limit switch on P0 is pressed.
+    Drive the filteration flask motor DOWN until the limit switch on P0 is pressed.
 
     Assumes P0 is pulled HIGH normally and goes LOW (0) when the switch is pressed.
     """
-    print("Media Dispenser: homing DOWN until P0 limit switch (PCF8574) is pressed")
+    print("Filteration Flask: homing DOWN until P0 limit switch (PCF8574) is pressed")
     _ensure_gpio()
     _ensure_i2c()
 
-    # Set direction for DOWN (same as Media_Disperensor_down)
+    # Set direction for DOWN (same as Filteration_flask_down)
     GPIO.output(DIR_PIN, GPIO.HIGH)
 
     while True:
@@ -98,7 +98,7 @@ def media_dispensor_config():
 
 
 def cleanup():
-    """Disable motor and release GPIO. Call when done with dispenser."""
+    """Disable motor and release GPIO. Call when done with filteration flask."""
     global _initialized, _i2c_initialized, _bus
     if _initialized:
         GPIO.output(EN_PIN, GPIO.HIGH)
@@ -111,3 +111,4 @@ def cleanup():
             pass
         _i2c_initialized = False
         _bus = None
+

@@ -1,29 +1,29 @@
 """
-Main script for Media Dispenser control.
+Main script for Filteration Flask control.
 Runs homing (down until limit switch via PCF8574) and then up/down with fixed steps.
 
-Media dispenser uses same pins as stepper.py: STEP=18, DIR=23, EN=24 (BCM).
+Filteration flask uses same pins as stepper.py: STEP=18, DIR=23, EN=24 (BCM).
 """
-from media_dispenser import (
-    Media_Disperensor_up,
-    Media_Disperensor_down,
-    media_dispensor_config,
+from filteration_flask import (
+    Filteration_flask_up,
+    Filteration_flask_down,
+    filteration_flask_config,
     cleanup,
 )
 import RPi.GPIO as GPIO
 import time
 try:
     # First: move down until limit switch on P0 (PCF8574) is pressed
-    media_dispensor_config()
+    filteration_flask_config()
     # Then run fixed-step movements
-    #Media_Disperensor_up(1000)   # 1000 steps up
-    #Media_Disperensor_down(100)  # 500 steps down
-    Media_Disperensor_up(3500)   # 1000 steps up
+    #Filteration_flask_up(1000)   # 1000 steps up
+    #Filteration_flask_down(100)  # 500 steps down
+    Filteration_flask_up(3500)   # 1000 steps up
     time.sleep(10)
-    Media_Disperensor_down(900)
+    Filteration_flask_down(900)
     time.sleep(10)
     for i in range(5):
-        Media_Disperensor_down(520)
+        Filteration_flask_down(520)
         time.sleep(5)   # 500 steps down
 finally:
     cleanup()
