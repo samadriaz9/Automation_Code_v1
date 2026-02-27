@@ -5,9 +5,9 @@ import smbus
 # Suction pump stepper motor pins (BCM numbering!)
 # NOTE: update these BCM pins to match your wiring
 # for your physical pins (e.g. 22 → its BCM GPIO, 30, 40, etc.).
-STEP_PIN = 19   # CLK+
-DIR_PIN = 26    # CW+
-EN_PIN = 13     # EN+
+STEP_PIN = 21   # CLK+
+DIR_PIN = 12    # CW+
+EN_PIN = 25     # EN+
 
 # PCF8574 I2C expander (limit switch on P1)
 PCF8574_ADDRESS = 0x20  # Adjust if your module uses a different address

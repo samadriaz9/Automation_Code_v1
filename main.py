@@ -22,8 +22,8 @@ import time
 
 try:
     # Filteration flask: move down until limit switch on P0 (PCF8574) is pressed
-    filteration_flask_config()
-    Filteration_flask_up(1150)
+    #filteration_flask_config()
+    #Filteration_flask_up(1150)
 
     # Suction pump: move down until limit switch on P1 (PCF8574) is pressed
     suction_pump_config()
