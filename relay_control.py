@@ -98,13 +98,15 @@ def run_relay(channel: int, seconds: float):
     if seconds < 0:
         raise ValueError("seconds must be >= 0")
 
-    print(f"Relay on P{channel}: ON for {seconds}s")
+    # Ensure bus is initialized in exactly the same way
+    # as the working run_relay_sequence().
+    _ensure_i2c()
+
+    print(f"run_relay(): Relay on P{channel}: ON for {seconds}s")
     set_relay(channel, True)
-    try:
-        time.sleep(seconds)
-    finally:
-        print(f"Relay on P{channel}: OFF")
-        set_relay(channel, False)
+    time.sleep(seconds)
+    print(f"run_relay(): Relay on P{channel}: OFF")
+    set_relay(channel, False)
 
 
 def cleanup():
