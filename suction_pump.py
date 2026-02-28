@@ -24,23 +24,34 @@ def _ensure_pwm():
     _pwm_initialized = True
 
 
-def suction_pump(speed, seconds):
-    """
-    Run suction pump at given speed (0–100) for given seconds.
-    Example:
-        suction_pump(80, 3)
-    """
+# ✅ NEW — continuous ON
+def suction_pump_on(speed):
+    """Start suction pump continuously."""
     _ensure_pwm()
 
-    # clamp values safely
     speed = max(0, min(100, float(speed)))
-    seconds = max(0, float(seconds))
-
-    print(f"Suction pump: {speed:.1f}% for {seconds:.2f}s")
+    print(f"Suction pump ON: {speed:.1f}%")
 
     rpwm.ChangeDutyCycle(speed)
+
+
+# ✅ NEW — stop
+def suction_pump_off():
+    """Stop suction pump."""
+    if _pwm_initialized:
+        print("Suction pump OFF")
+        rpwm.ChangeDutyCycle(0)
+
+
+# ✅ OLD — keep for compatibility
+def suction_pump(speed, seconds):
+    """
+    Run suction pump at given speed for given seconds.
+    (Blocking version)
+    """
+    suction_pump_on(speed)
     time.sleep(seconds)
-    rpwm.ChangeDutyCycle(0)
+    suction_pump_off()
 
 
 def cleanup():
@@ -52,4 +63,3 @@ def cleanup():
         except:
             pass
         _pwm_initialized = False
-    # GPIO.cleanup() should be called by main program
