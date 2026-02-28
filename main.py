@@ -6,9 +6,10 @@ Filteration flask uses same pins as stepper.py: STEP=18, DIR=23, EN=24 (BCM).
 Filteration unit uses CLK=13, CW=19, EN=26 (BCM).
 Suction pump uses separate GPIO pins (see suction_pump.py).
 """
+import time
 from suction_pump_up_down import (suction_pump_up,
- suction_pump_off, suction_pump_home,
- suction_pump_on, suction_pump_off)
+ suction_pump_down, suction_pump_home
+)
 from filteration_flask import (
     Filteration_flask_up,
     Filteration_flask_down,
@@ -22,7 +23,7 @@ from filteration_unit import (
     cleanup as filteration_unit_cleanup,
 )
 from suction_pump import (
-    suction_pump,
+    suction_pump,suction_pump_on, suction_pump_off,
     cleanup as suction_cleanup,
 )
 from consumable import (
@@ -47,19 +48,27 @@ import RPi.GPIO as GPIO
 import time
 
 try:
-    suction_pump_home()   # step 1
-    suction_pump_up(230)  # step 2
-    Consumable_up(300)    # step 3
+    #media pad + petri dish
+    #suction_pump_home()   # step 1
+    #suction_pump_up(250)  # step 2
+    #Consumable_up(290)    # step 3
 
-    # ✅ start pump
-    suction_pump_on(100)
-
+     #✅ start pump
+    #suction_pump_on(100)
+    #time.sleep(1)
     # ✅ move stepper while pump is running
-    suction_pump_up(1150)
+    #suction_pump_up(3110)
 
     # ✅ stop pump immediately after motion
+    #suction_pump_off()
+    suction_pump_home()
+    suction_pump_up(400)
+    Consumable_up(310)
+    suction_pump_on(50)
+    time.sleep(1)
+    Consumable_down(310)
+    suction_pump_up(1200)
     suction_pump_off()
-
 finally:
     # Clean up all modules
     filteration_cleanup()
