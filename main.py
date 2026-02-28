@@ -63,9 +63,10 @@ try:
     #Consumable_down(300)
 
     # Relays on second PCF8574: P0..P4 ON for 2 seconds each
-    # run_relay_sequence()
+    #run_relay_sequence()
+    
     # Note: most relay boards map "Relay 1" to PCF pin P0.
-    run_relay(P0, 2)
+    run_relay(P4, 3)
 finally:
     # Clean up all modules
     filteration_cleanup()
