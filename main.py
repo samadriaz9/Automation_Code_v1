@@ -66,7 +66,7 @@ try:
     #run_relay_sequence()
     
     # Note: most relay boards map "Relay 1" to PCF pin P0.
-    run_relay(P4, 3)
+    run_relay(P4, 5)
 finally:
     # Clean up all modules
     filteration_cleanup()
