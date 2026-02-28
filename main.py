@@ -53,7 +53,14 @@ try:
     #Filteration_flask_up(1150)
 
     # Suction pump: run DC motor via IBT-2 (BTS7960)
-    suction_pump(100, 2)  # 100% power for 2 seconds
+    suction_pump(90, 2)  # 100% power for 2 seconds
+
+    # Consumable: simple up/down movement without limit switch
+    #Consumable_up(500)
+    #Consumable_down(300)
+
+    # Relays on second PCF8574: P0..P4 ON for 2 seconds each
+    # run_relay_sequence()
 finally:
     # Clean up all modules
     filteration_cleanup()
