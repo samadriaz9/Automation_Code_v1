@@ -19,9 +19,7 @@ from filteration_unit import (
     cleanup as filteration_unit_cleanup,
 )
 from suction_pump import (
-    Suction_pump_up,
-    Suction_pump_down,
-    suction_pump_config,
+    suction_pump,
     cleanup as suction_cleanup,
 )
 from consumable import (
@@ -54,19 +52,15 @@ try:
     #filteration_flask_config()
     #Filteration_flask_up(1150)
 
-    # Suction pump: move down until limit switch on P1 (PCF8574) is pressed
-    #suction_pump_config()
-    #Suction_pump_up(1000)
+    # Suction pump: run DC motor via IBT-2 (BTS7960)
+    suction_pump(100, 2)  # 100% power for 2 seconds
 
     # Consumable: simple up/down movement without limit switch
     #Consumable_up(500)
     #Consumable_down(300)
 
     # Relays on second PCF8574: P0..P4 ON for 2 seconds each
-    #run_relay_sequence()
-    
-    # Note: most relay boards map "Relay 1" to PCF pin P0.
-    run_relay(P4, 3)
+    # run_relay_sequence()
 finally:
     # Clean up all modules
     filteration_cleanup()
