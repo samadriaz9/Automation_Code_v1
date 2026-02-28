@@ -10,7 +10,7 @@ EN_PIN = 24     # EN+
 # PCF8574 I2C expander (limit switch on P0)
 PCF8574_ADDRESS = 0x20  # Adjust if your module uses a different address
 
-delay = 0.001   # speed control (same as stepper.py)
+delay = 0.003   # speed control (same as stepper.py)
 
 # One-time GPIO / I2C setup for this module
 _initialized = False
