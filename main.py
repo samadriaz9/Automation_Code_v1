@@ -120,7 +120,8 @@ try:
     
     #petri_dishes_home()
     #Camera_home()
-    Media_dispensor_home()
+    #Media_dispensor_home()
+    consumable_cleanup()
 finally:
     # Clean up all modules
     filteration_cleanup()
