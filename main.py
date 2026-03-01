@@ -55,6 +55,11 @@ from petri_dishes import (
     petri_dishes_up,
     petri_dishes_down,
 )
+from camera_module import (
+    Camera_home,
+    Camera_up,
+    Camera_down,
+)
 import RPi.GPIO as GPIO
 import time
 
@@ -107,8 +112,8 @@ try:
     #time.sleep(1)
     #suction_pump_off()
     
-    petri_dishes_home()
-    
+    #petri_dishes_home()
+    Camera_home()
 finally:
     # Clean up all modules
     filteration_cleanup()
