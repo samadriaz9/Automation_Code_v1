@@ -78,14 +78,29 @@ try:
     #suction_pump_up(1200)
     #suction_pump_off()
     
-    filteration_suction_pump_on(90)
-    time.sleep(2)
-    filteration_suction_pump_off()
+    #filteration_suction_pump_on(90)
+    #time.sleep(2)
+    #filteration_suction_pump_off()
     
-    filteration_flask_config()
-    Filteration_flask_up(30)
-    filteration_unit_config()
-    Filteration_unit_down(20)
+    #filteration_unit_config()
+    #filteration_flask_config()
+    #Filteration_flask_up(32)
+    #Filteration_unit_up(850)
+    
+    #filteration_suction_pump_on(90)
+    #time.sleep(2) 
+    #filteration_suction_pump_off()
+    
+    #filteration_unit_config()
+    #Filteration_flask_up(1150)
+    
+    
+    
+    
+    suction_pump_on(100)
+    time.sleep(1)
+    suction_pump_off()
+    
     
     
 finally:
