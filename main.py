@@ -60,6 +60,12 @@ from camera_module import (
     Camera_up,
     Camera_down,
 )
+
+from media_dispensor import (
+    Media_dispensor_home,
+    Media_dispensor_up,
+    Media_dispensor_down,
+)
 import RPi.GPIO as GPIO
 import time
 
@@ -113,7 +119,8 @@ try:
     #suction_pump_off()
     
     #petri_dishes_home()
-    Camera_home()
+    #Camera_home()
+    Media_dispensor_home
 finally:
     # Clean up all modules
     filteration_cleanup()
