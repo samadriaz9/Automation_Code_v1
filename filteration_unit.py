@@ -7,7 +7,7 @@ STEP_PIN = 13   # CLK+
 DIR_PIN = 19    # CW+
 EN_PIN = 26     # EN+
 
-# PCF8574 I2C expander (limit switch on P2)
+# PCF8574 I2C expander (limit switch now on P6)
 PCF8574_ADDRESS = 0x20  # Adjust if your module uses a different address
 
 delay = 0.001   # speed control
@@ -35,22 +35,25 @@ def _ensure_i2c():
     global _i2c_initialized, _bus
     if not _i2c_initialized:
         _bus = smbus.SMBus(1)  # I2C bus 1 on Raspberry Pi
-        # Configure all P0–P7 as inputs with internal pull-ups (write 1s)
+
+        # Configure all P0–P7 as inputs with pull-ups
         _bus.write_byte(PCF8574_ADDRESS, 0xFF)
+
         _i2c_initialized = True
 
 
-def _read_p2():
-    """Read state of P2 from PCF8574 (returns 0 or 1)."""
+def _read_p6():
+    """Read state of P6 from PCF8574 (returns 0 or 1)."""
     _ensure_i2c()
     value = _bus.read_byte(PCF8574_ADDRESS)
-    return (value >> 2) & 0x01  # bit 2 is P2
+    return (value >> 6) & 0x01  # ✅ bit 6 is P6
 
 
 def _step(steps, direction_high):
     """Run a given number of steps in one direction."""
     _ensure_gpio()
     GPIO.output(DIR_PIN, GPIO.HIGH if direction_high else GPIO.LOW)
+
     for _ in range(steps):
         GPIO.output(STEP_PIN, GPIO.HIGH)
         time.sleep(delay)
@@ -61,8 +64,7 @@ def _step(steps, direction_high):
 def Filteration_unit_up(steps):
     """Move filteration unit motor UP by the given number of steps."""
     print(f"Filteration Unit: moving UP {steps} steps")
-    # Match wiring convention used for other motors if needed:
-    # assume DIR LOW = physical UP (like filteration_flask)
+    # assume DIR LOW = physical UP
     _step(steps, direction_high=False)
 
 
@@ -75,21 +77,23 @@ def Filteration_unit_down(steps):
 
 def filteration_unit_config():
     """
-    Drive the filteration unit motor DOWN until the limit switch on P2 is pressed.
+    Drive the filteration unit motor DOWN until the limit switch on P6 is pressed.
 
-    Assumes P2 is pulled HIGH normally and goes LOW (0) when the switch is pressed.
+    Assumes P6 is pulled HIGH normally and goes LOW (0) when the switch is pressed.
     """
-    print("Filteration Unit: homing DOWN until P2 limit switch (PCF8574) is pressed")
+    print("Filteration Unit: homing DOWN until P6 limit switch (PCF8574) is pressed")
+
     _ensure_gpio()
     _ensure_i2c()
 
-    # Set direction for DOWN (same as Filteration_unit_down)
+    # Set direction for DOWN
     GPIO.output(DIR_PIN, GPIO.HIGH)
 
     while True:
-        p2 = _read_p2()
-        if p2 == 0:
-            print("P2 limit switch detected, stopping.")
+        p6 = _read_p6()
+
+        if p6 == 0:
+            print("P6 limit switch detected, stopping.")
             break
 
         GPIO.output(STEP_PIN, GPIO.HIGH)
@@ -101,15 +105,15 @@ def filteration_unit_config():
 def cleanup():
     """Disable motor and release GPIO. Call when done with filteration unit."""
     global _initialized, _i2c_initialized, _bus
+
     if _initialized:
-        GPIO.output(EN_PIN, GPIO.HIGH)
+        GPIO.output(EN_PIN, GPIO.HIGH)  # disable driver
         _initialized = False
+
     if _i2c_initialized and _bus is not None:
         try:
             _bus.close()
         except AttributeError:
-            # smbus on some systems may not have close()
             pass
         _i2c_initialized = False
         _bus = None
-
