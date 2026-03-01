@@ -44,6 +44,11 @@ from relay_control import (
     run_relay_sequence,
     cleanup as relay_cleanup,
 )
+
+from filteration_suction_pump import (
+    filteration_suction_pump_on,
+    filteration_suction_pump_off,
+)
 import RPi.GPIO as GPIO
 import time
 
@@ -61,14 +66,28 @@ try:
 
     # ✅ stop pump immediately after motion
     #suction_pump_off()
-    suction_pump_home()
-    suction_pump_up(400)
-    Consumable_up(310)
-    suction_pump_on(50)
-    time.sleep(1)
-    Consumable_down(310)
-    suction_pump_up(1200)
-    suction_pump_off()
+    
+    
+    #  Filter Paper
+    #suction_pump_home()
+    #suction_pump_up(400)
+    #Consumable_up(310)
+    #suction_pump_on(100)
+    #time.sleep(1)
+    #Consumable_down(310)
+    #suction_pump_up(1200)
+    #suction_pump_off()
+    
+    filteration_suction_pump_on(90)
+    time.sleep(2)
+    filteration_suction_pump_off()
+    
+    filteration_flask_config()
+    Filteration_flask_up(30)
+    filteration_unit_config()
+    Filteration_unit_down(20)
+    
+    
 finally:
     # Clean up all modules
     filteration_cleanup()

@@ -2,8 +2,8 @@ import RPi.GPIO as GPIO
 import time
 
 # ---------- PIN SETUP ----------
-#RPWM_PIN = 4   # BCM
-RPWM_PIN = 4
+RPWM_PIN = 25  # BCM (NEW PIN)
+
 _pwm_initialized = False
 rpwm = None
 
@@ -24,34 +24,33 @@ def _ensure_pwm():
     _pwm_initialized = True
 
 
-# ✅ NEW — continuous ON
-def suction_pump_on(speed):
-    """Start suction pump continuously."""
+# ? continuous ON
+def filteration_suction_pump_on(speed):
+    """Start filtration suction pump continuously."""
     _ensure_pwm()
 
     speed = max(0, min(100, float(speed)))
-    print(f"Suction pump ON: {speed:.1f}%")
+    print(f"Filteration suction pump ON: {speed:.1f}%")
 
     rpwm.ChangeDutyCycle(speed)
 
 
-# ✅ NEW — stop
-def suction_pump_off():
-    """Stop suction pump."""
+# ? stop
+def filteration_suction_pump_off():
+    """Stop filtration suction pump."""
     if _pwm_initialized:
-        print("Suction pump OFF")
+        print("Filteration suction pump OFF")
         rpwm.ChangeDutyCycle(0)
 
 
-# ✅ OLD — keep for compatibility
-def suction_pump(speed, seconds):
+# ? blocking version (optional compatibility)
+def filteration_suction_pump(speed, seconds):
     """
-    Run suction pump at given speed for given seconds.
-    (Blocking version)
+    Run filtration suction pump at given speed for given seconds.
     """
-    suction_pump_on(speed)
+    filteration_suction_pump_on(speed)
     time.sleep(seconds)
-    suction_pump_off()
+    filteration_suction_pump_off()
 
 
 def cleanup():
@@ -63,4 +62,3 @@ def cleanup():
         except:
             pass
         _pwm_initialized = False
-        
