@@ -5,10 +5,10 @@ import smbus
 # Media Dispensor motor pins (BCM numbering)
 STEP_PIN = 6    # CLK+
 DIR_PIN = 16    # CW+
-# ❗ No EN pin for this module
+# No EN pin
 
 # PCF8574 I2C expander (limit switch on P4)
-PCF8574_ADDRESS = 0x20  # Adjust if your module uses a different address
+PCF8574_ADDRESS = 0x20
 
 delay = 0.001   # speed control
 
@@ -34,7 +34,7 @@ def _ensure_i2c():
     if not _i2c_initialized:
         _bus = smbus.SMBus(1)
 
-        # Configure all P0–P7 as inputs with pull-ups
+        # Set all pins as inputs with pull-ups
         _bus.write_byte(PCF8574_ADDRESS, 0xFF)
 
         _i2c_initialized = True
@@ -74,26 +74,30 @@ def Media_dispensor_down(steps):
 def Media_dispensor_home():
     """
     Drive the media dispensor motor DOWN until the limit switch on P4 is pressed.
-    Assumes P4 is HIGH normally and LOW when pressed.
+
+    ⚠️ Your wiring is inverted:
+    P4 = 0 → not pressed
+    P4 = 1 → pressed
     """
-    print("Media Dispensor: homing DOWN until P4 limit switch (PCF8574) is pressed")
+    print("Media Dispensor: homing DOWN until P4 limit switch is pressed")
 
     _ensure_gpio()
     _ensure_i2c()
 
     # Set direction for DOWN
-    GPIO.output(DIR_PIN, GPIO.LOW)
+    GPIO.output(DIR_PIN, GPIO.HIGH)
 
     while True:
         p4 = _read_p4()
 
-        if p4 == 0:
+        # ✅ INVERTED LOGIC (your hardware behavior)
+        if p4 == 1:
             print("P4 limit switch detected, stopping.")
             break
 
-        GPIO.output(STEP_PIN, GPIO.LOW)
-        time.sleep(delay)
         GPIO.output(STEP_PIN, GPIO.HIGH)
+        time.sleep(delay)
+        GPIO.output(STEP_PIN, GPIO.LOW)
         time.sleep(delay)
 
 
