@@ -49,6 +49,12 @@ from filteration_suction_pump import (
     filteration_suction_pump_on,
     filteration_suction_pump_off,
 )
+
+from petri_dishes import (
+    petri_dishes_home,
+    petri_dishes_up,
+    petri_dishes_down,
+)
 import RPi.GPIO as GPIO
 import time
 
@@ -97,11 +103,11 @@ try:
     
     
     
-    suction_pump_on(100)
-    time.sleep(1)
-    suction_pump_off()
+    #suction_pump_on(100)
+    #time.sleep(1)
+    #suction_pump_off()
     
-    
+    petri_dishes_home()
     
 finally:
     # Clean up all modules

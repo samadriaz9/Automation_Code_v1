@@ -87,7 +87,7 @@ def petri_dishes_home():
     _ensure_i2c()
 
     # Set direction for DOWN
-    GPIO.output(DIR_PIN, GPIO.HIGH)
+    GPIO.output(DIR_PIN, GPIO.LOW)
 
     while True:
         p5 = _read_p5()
@@ -96,9 +96,9 @@ def petri_dishes_home():
             print("P5 limit switch detected, stopping.")
             break
 
-        GPIO.output(STEP_PIN, GPIO.HIGH)
-        time.sleep(delay)
         GPIO.output(STEP_PIN, GPIO.LOW)
+        time.sleep(delay)
+        GPIO.output(STEP_PIN, GPIO.HIGH)
         time.sleep(delay)
 
 
