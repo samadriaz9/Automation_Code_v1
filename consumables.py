@@ -2,9 +2,9 @@ import RPi.GPIO as GPIO
 import time
 
 # Consumable stepper motor pins (BCM numbering)
-EN_PIN = 14   # EN+
-DIR_PIN = 15  # CW+
-STEP_PIN = 17 # CLK+
+DIR_PIN = 15   # CW+
+STEP_PIN = 17  # CLK+
+# ❌ EN pin removed
 
 delay = 0.001  # speed control
 
@@ -18,9 +18,6 @@ def _ensure_gpio():
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(STEP_PIN, GPIO.OUT)
         GPIO.setup(DIR_PIN, GPIO.OUT)
-        GPIO.setup(EN_PIN, GPIO.OUT)
-
-        GPIO.output(EN_PIN, GPIO.LOW)  # LOW = enable motor
         _initialized = True
 
 
@@ -49,8 +46,6 @@ def consumable_down(steps):
 
 
 def cleanup():
-    """Disable motor."""
+    """Cleanup flag only (GPIO.cleanup handled in main)."""
     global _initialized
-    if _initialized:
-        GPIO.output(EN_PIN, GPIO.HIGH)  # disable motor
-        _initialized = False
+    _initialized = False
