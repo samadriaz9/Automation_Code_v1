@@ -82,7 +82,7 @@ def Media_dispensor_home():
     _ensure_i2c()
 
     # Set direction for DOWN
-    GPIO.output(DIR_PIN, GPIO.HIGH)
+    GPIO.output(DIR_PIN, GPIO.LOW)
 
     while True:
         p4 = _read_p4()
@@ -91,9 +91,9 @@ def Media_dispensor_home():
             print("P4 limit switch detected, stopping.")
             break
 
-        GPIO.output(STEP_PIN, GPIO.HIGH)
-        time.sleep(delay)
         GPIO.output(STEP_PIN, GPIO.LOW)
+        time.sleep(delay)
+        GPIO.output(STEP_PIN, GPIO.HIGH)
         time.sleep(delay)
 
 
