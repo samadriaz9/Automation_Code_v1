@@ -132,6 +132,7 @@ signal.signal(signal.SIGTERM, _on_sigterm)
 atexit.register(shutdown_all)
 
 try:
+    filteration_flask_config()
     solenoid_valve(0.1)
     x = input ('Enter 1: ')
     
