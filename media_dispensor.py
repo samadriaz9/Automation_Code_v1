@@ -77,29 +77,26 @@ def Media_dispensor_home():
     """
     Drive the media dispensor motor DOWN until the limit switch on P4 is pressed.
 
-    ⚠️ Your wiring is inverted:
-    P4 = 0 → not pressed
-    P4 = 1 → pressed
+    Wiring (corrected): P4 = 1 when not pressed (pull-up), P4 = 0 when pressed.
     """
     print("Media Dispensor: homing DOWN until P4 limit switch is pressed")
 
     _ensure_gpio()
     _ensure_i2c()
 
-    # Set direction for DOWN
-    GPIO.output(DIR_PIN, GPIO.LOW)
+    # Same direction and step pattern as Media_dispensor_down()
+    GPIO.output(DIR_PIN, GPIO.HIGH)
 
     while True:
         p4 = _read_p4()
 
-        # ✅ INVERTED LOGIC (your hardware behavior)
-        if p4 == 1:
+        if p4 == 0:
             print("P4 limit switch detected, stopping.")
             break
 
-        GPIO.output(STEP_PIN, GPIO.LOW)
-        time.sleep(delay)
         GPIO.output(STEP_PIN, GPIO.HIGH)
+        time.sleep(delay)
+        GPIO.output(STEP_PIN, GPIO.LOW)
         time.sleep(delay)
 
 
