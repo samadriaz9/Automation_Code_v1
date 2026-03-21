@@ -72,6 +72,7 @@ import RPi.GPIO as GPIO
 import time
 
 try:
+    filteration_flask_config()
     solenoid_valve(0.1)
     x = input ('Enter 1: ')
     
