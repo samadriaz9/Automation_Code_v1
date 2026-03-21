@@ -6,6 +6,7 @@ Filteration flask: STEP=18, DIR=23 (BCM); EN tied on hardware (see filteration_f
 Filteration unit: STEP=13, DIR=19 (BCM); EN tied on hardware (see filteration_unit.py).
 Suction pump lift (stepper): STEP=21, DIR=12 (BCM); EN tied on hardware (see suction_pump_up_down.py). DC pump: suction_pump.py.
 Petri dishes: STEP=10, DIR=22 (BCM); EN tied on hardware (see petri_dishes.py).
+Media dispensor: STEP=24, DIR=27 (BCM); physical pins 18 & 13 (see Media_dispensor.py).
 
 Shutdown: Ctrl+C runs full cleanup (see shutdown_all). SIGTERM (kill) also cleans up.
 """

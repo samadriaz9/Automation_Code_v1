@@ -3,9 +3,11 @@ import time
 import smbus
 
 # Media Dispensor motor pins (BCM numbering)
-STEP_PIN = 6    # CLK+
-DIR_PIN = 16    # CW+
-# No EN pin
+# Was 6 / 16 — changed to free pins (see PIN_MAP.md).
+# Physical 40-pin header: GPIO24 -> pin 18 (STEP), GPIO27 -> pin 13 (DIR)
+STEP_PIN = 24   # CLK+
+DIR_PIN = 27    # CW+
+# No EN pin — tie EN on driver hardware (GND if active-low enable)
 
 # PCF8574 I2C expander (limit switch on P4)
 PCF8574_ADDRESS = 0x20
