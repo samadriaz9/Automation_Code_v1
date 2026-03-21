@@ -62,42 +62,37 @@ def _step(steps, direction_high):
 def petri_dishes_up(steps):
     """Move petri dishes motor UP by the given number of steps."""
     print(f"Petri Dishes: moving UP {steps} steps")
-    # assume DIR LOW = physical UP
-    _step(steps, direction_high=False)
+    # Swapped vs earlier wiring — DIR HIGH = physical UP
+    _step(steps, direction_high=True)
 
 
 def petri_dishes_down(steps):
     """Move petri dishes motor DOWN by the given number of steps."""
     print(f"Petri Dishes: moving DOWN {steps} steps")
-    # assume DIR HIGH = physical DOWN
-    _step(steps, direction_high=True)
+    # Swapped vs earlier wiring — DIR LOW = physical DOWN
+    _step(steps, direction_high=False)
 
 
 def petri_dishes_home():
     """
-    Drive the petri dishes motor DOWN until the limit switch on P5 is pressed.
+    Drive toward the limit switch on P5 until pressed (switch on opposite side from before).
 
     Assumes P5 is pulled HIGH normally and goes LOW (0) when the switch is pressed.
+    If the stage runs away from the switch instead, flip `toward_limit` below.
     """
-    print("Petri Dishes: homing DOWN until P5 limit switch (PCF8574) is pressed")
-
     _ensure_gpio()
     _ensure_i2c()
 
-    # Set direction for DOWN
-    GPIO.output(DIR_PIN, GPIO.LOW)
+    # Direction that moves the stage toward the limit (was DOWN+inverted pulses; now UP with same _step() pattern)
+    toward_limit = True  # same as petri_dishes_up after direction swap
+
+    print("Petri Dishes: homing until P5 limit switch (PCF8574) is pressed")
 
     while True:
-        p5 = _read_p5()
-
-        if p5 == 0:
+        if _read_p5() == 0:
             print("P5 limit switch detected, stopping.")
             break
-
-        GPIO.output(STEP_PIN, GPIO.LOW)
-        time.sleep(delay)
-        GPIO.output(STEP_PIN, GPIO.HIGH)
-        time.sleep(delay)
+        _step(1, direction_high=toward_limit)
 
 
 def cleanup():
