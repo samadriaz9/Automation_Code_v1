@@ -1,8 +1,21 @@
+"""
+Solenoid valve control (BCM numbering).
+
+BOOT NOTE — valve turning ON before main.py runs:
+  GPIO 14 is the UART TX pin. With the serial console enabled, this line is
+  often HIGH at boot, which turns ON an active-HIGH driver/relay before Python runs.
+
+  Fix: install scripts/solenoid_boot_safe.sh + systemd service (see scripts/README_SOLENOID_BOOT.md),
+  or move the solenoid to a non-UART GPIO (e.g. 17, 22) and set SOLENOID_PIN below.
+
+  Also: consumable.py uses EN_PIN = 14 — do not use both modules on the same pin.
+"""
 import RPi.GPIO as GPIO
 import time
 
 # ---------- PIN SETUP ----------
-SOLENOID_PIN = 14  # BCM
+# BCM. Avoid 14/15 if you need UART-free pins; 14 conflicts with UART TX at boot.
+SOLENOID_PIN = 14
 
 _initialized = False
 
