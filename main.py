@@ -3,12 +3,22 @@ Main script for Filteration Flask, Filteration Unit and Suction Pump control.
 Runs homing (down until limit switch via PCF8574) and then movements.
 
 Filteration flask: STEP=18, DIR=23 (BCM); EN tied on hardware (see filteration_flask.py).
-Filteration unit uses CLK=13, CW=19, EN=26 (BCM).
-Suction pump uses separate GPIO pins (see suction_pump.py).
+Filteration unit: STEP=13, DIR=19 (BCM); EN tied on hardware (see filteration_unit.py).
+Suction pump lift (stepper): STEP=21, DIR=12 (BCM); EN tied on hardware (see suction_pump_up_down.py). DC pump: suction_pump.py.
+Petri dishes: STEP=10, DIR=22 (BCM); EN tied on hardware (see petri_dishes.py).
+
+Shutdown: Ctrl+C runs full cleanup (see shutdown_all). SIGTERM (kill) also cleans up.
 """
+import atexit
+import signal
+import sys
 import time
-from suction_pump_up_down import (suction_pump_up,
- suction_pump_down, suction_pump_home
+
+from suction_pump_up_down import (
+    suction_pump_up,
+    suction_pump_down,
+    suction_pump_home,
+    cleanup as suction_lift_cleanup,
 )
 from filteration_flask import (  # pins 12 and 16 CLK+ + DIR+ only M1
     Filteration_flask_up,
@@ -48,28 +58,78 @@ from relay_control import (
 from filteration_suction_pump import (
     filteration_suction_pump_on,
     filteration_suction_pump_off,
+    cleanup as filteration_suction_cleanup,
 )
 
 from petri_dishes import (
     petri_dishes_home,
     petri_dishes_up,
     petri_dishes_down,
+    cleanup as petri_dishes_cleanup,
 )
 from camera_module import (
     Camera_home,
     Camera_up,
     Camera_down,
+    cleanup as camera_cleanup,
 )
 
 from media_dispensor import (
     Media_dispensor_home,
     Media_dispensor_up,
     Media_dispensor_down,
+    cleanup as media_dispensor_cleanup,
 )
 
-from solinoid_value import solenoid_valve_on, solenoid_valve_off, solenoid_valve
+from solinoid_value import solenoid_valve_on, solenoid_valve_off, solenoid_valve, cleanup as solenoid_cleanup
 import RPi.GPIO as GPIO
-import time
+
+# --- Run once: stops PWM/relays/solenoid and releases GPIO (helps avoid drivers heating when idle) ---
+_shutdown_done = False
+
+
+def shutdown_all():
+    """Idempotent full cleanup. Call on exit, Ctrl+C, or SIGTERM."""
+    global _shutdown_done
+    if _shutdown_done:
+        return
+    _shutdown_done = True
+    print("\n[Shutdown] Releasing GPIO and stopping outputs...")
+
+    # Stop DC/PWM and relays first; then stepper modules; solenoid off; GPIO.cleanup last.
+    for name, fn in (
+        ("filteration_suction_pump", filteration_suction_cleanup),
+        ("suction_pump (DC)", suction_cleanup),
+        ("suction_pump_up_down", suction_lift_cleanup),
+        ("relay", relay_cleanup),
+        ("solenoid", solenoid_cleanup),
+        ("consumable", consumable_cleanup),
+        ("filteration_flask", filteration_cleanup),
+        ("filteration_unit", filteration_unit_cleanup),
+        ("petri_dishes", petri_dishes_cleanup),
+        ("camera", camera_cleanup),
+        ("media_dispensor", media_dispensor_cleanup),
+    ):
+        try:
+            fn()
+        except Exception as e:
+            print(f"  Cleanup warning ({name}): {e}")
+
+    try:
+        GPIO.cleanup()
+    except Exception:
+        pass
+    print("[Shutdown] Done.")
+
+
+def _on_sigterm(signum, frame):
+    shutdown_all()
+    sys.exit(0)
+
+
+# kill / systemd stop without -9
+signal.signal(signal.SIGTERM, _on_sigterm)
+atexit.register(shutdown_all)
 
 try:
     solenoid_valve(0.1)
@@ -173,11 +233,8 @@ try:
     Camera_down(500)
     
 
+except KeyboardInterrupt:
+    print("\nInterrupted (Ctrl+C).")
+
 finally:
-    # Clean up all modules
-    filteration_cleanup()
-    filteration_unit_cleanup()
-    suction_cleanup()
-    consumable_cleanup()
-    relay_cleanup()
-    GPIO.cleanup()
+    shutdown_all()

@@ -2,10 +2,10 @@ import RPi.GPIO as GPIO
 import time
 import smbus
 
-# Petri Dishes motor pins (BCM numbering)
+# Petri Dishes motor pins (BCM) — STEP + DIR only (same idea as filteration_flask / Media_dispensor).
+# Hardware: tie EN+ on the stepper driver to GND so the driver is always enabled (typical: EN active-LOW).
 STEP_PIN = 10   # CLK+
 DIR_PIN = 22    # CW+
-EN_PIN = 27     # EN+
 
 # PCF8574 I2C expander (limit switch on P5)
 PCF8574_ADDRESS = 0x20  # Adjust if your module uses a different address
@@ -25,8 +25,6 @@ def _ensure_gpio():
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(STEP_PIN, GPIO.OUT)
         GPIO.setup(DIR_PIN, GPIO.OUT)
-        GPIO.setup(EN_PIN, GPIO.OUT)
-        GPIO.output(EN_PIN, GPIO.LOW)  # Enable motor (LOW = enable)
         _initialized = True
 
 
@@ -103,11 +101,10 @@ def petri_dishes_home():
 
 
 def cleanup():
-    """Disable motor and release GPIO. Call when done with petri dishes."""
+    """Release I2C resources (GPIO cleanup handled by main). No EN pin — motor idle when not stepping."""
     global _initialized, _i2c_initialized, _bus
 
     if _initialized:
-        GPIO.output(EN_PIN, GPIO.HIGH)  # disable driver
         _initialized = False
 
     if _i2c_initialized and _bus is not None:

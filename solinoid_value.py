@@ -8,7 +8,6 @@ BOOT NOTE — valve turning ON before main.py runs:
   Fix: install scripts/solenoid_boot_safe.sh + systemd service (see scripts/README_SOLENOID_BOOT.md),
   or move the solenoid to a non-UART GPIO (e.g. 17, 22) and set SOLENOID_PIN below.
 
-  Also: consumable.py uses EN_PIN = 14 — do not use both modules on the same pin.
 """
 import RPi.GPIO as GPIO
 import time

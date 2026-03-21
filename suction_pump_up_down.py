@@ -2,10 +2,10 @@ import RPi.GPIO as GPIO
 import time
 import smbus
 
-# ---------- PIN MAP ----------
+# ---------- PIN MAP (BCM) — STEP + DIR only (same idea as filteration_flask / Media_dispensor).
+# Hardware: tie EN+ on the stepper driver to GND so the driver is always enabled (typical: EN active-LOW).
 STEP_PIN = 21   # CLK+
 DIR_PIN  = 12   # CW+
-EN_PIN   = 25   # EN+
 
 # PCF8574 (limit switch on P2)
 PCF8574_ADDRESS = 0x20
@@ -29,10 +29,6 @@ def _ensure_gpio():
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(STEP_PIN, GPIO.OUT)
         GPIO.setup(DIR_PIN, GPIO.OUT)
-        GPIO.setup(EN_PIN, GPIO.OUT)
-
-        # LOW = enable
-        GPIO.output(EN_PIN, GPIO.LOW)
 
         _initialized = True
 
@@ -90,7 +86,7 @@ def suction_pump_down(steps, stop_on_limit=True):
 
     for _ in range(steps):
         if stop_on_limit and _read_p2() == 0:
-            print("P2 limit reached during DOWN � stopping early.")
+            print("P2 limit reached during DOWN — stopping early.")
             break
 
         GPIO.output(STEP_PIN, GPIO.HIGH)
@@ -125,11 +121,10 @@ def suction_pump_home():
 
 # ---------- CLEANUP ----------
 def cleanup():
-    """Disable motor and release resources."""
+    """Release I2C resources (GPIO cleanup handled by main). No EN pin — motor idle when not stepping."""
     global _initialized, _i2c_initialized, _bus
 
     if _initialized:
-        GPIO.output(EN_PIN, GPIO.HIGH)  # disable driver
         _initialized = False
 
     if _i2c_initialized and _bus is not None:

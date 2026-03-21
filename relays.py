@@ -3,8 +3,9 @@ Main script for Filteration Flask, Filteration Unit and Suction Pump control.
 Runs homing (down until limit switch via PCF8574) and then movements.
 
 Filteration flask: STEP=18, DIR=23 (BCM); EN tied on hardware (see filteration_flask.py).
-Filteration unit uses CLK=13, CW=19, EN=26 (BCM).
-Suction pump uses separate GPIO pins (see suction_pump.py).
+Filteration unit: STEP=13, DIR=19 (BCM); EN tied on hardware (see filteration_unit.py).
+Suction pump lift (stepper): STEP=21, DIR=12 (BCM); EN tied on hardware (see suction_pump_up_down.py). DC pump: suction_pump.py.
+Petri dishes: STEP=10, DIR=22 (BCM); EN tied on hardware (see petri_dishes.py).
 """
 from filteration_flask import (
     Filteration_flask_up,

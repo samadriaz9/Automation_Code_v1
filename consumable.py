@@ -1,10 +1,10 @@
 import RPi.GPIO as GPIO
 import time
 
-# Consumable stepper motor pins (BCM numbering)
+# Consumable stepper motor pins (BCM) — STEP + DIR only (frees GPIO 14 for solenoid / other use).
+# Hardware: tie EN+ on the driver to GND (typical: EN active-LOW).
 STEP_PIN = 17   # CLK+
 DIR_PIN = 15    # CW+
-EN_PIN = 14     # EN+
 
 delay = 0.001   # speed control
 
@@ -18,8 +18,6 @@ def _ensure_gpio():
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(STEP_PIN, GPIO.OUT)
         GPIO.setup(DIR_PIN, GPIO.OUT)
-        GPIO.setup(EN_PIN, GPIO.OUT)
-        GPIO.output(EN_PIN, GPIO.LOW)  # Enable motor (LOW = enable)
         _initialized = True
 
 
@@ -48,9 +46,8 @@ def Consumable_down(steps):
 
 
 def cleanup():
-    """Disable motor and release GPIO. Call when done with consumable."""
+    """Release state (GPIO cleanup handled by main). No EN pin."""
     global _initialized
     if _initialized:
-        GPIO.output(EN_PIN, GPIO.HIGH)
         _initialized = False
 
