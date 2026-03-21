@@ -2,7 +2,7 @@
 Main script for Filteration Flask, Filteration Unit and Suction Pump control.
 Runs homing (down until limit switch via PCF8574) and then movements.
 
-Filteration flask uses same pins as stepper.py: STEP=18, DIR=23, EN=24 (BCM).
+Filteration flask: STEP=18, DIR=23 (BCM); EN tied on hardware (see filteration_flask.py).
 Filteration unit uses CLK=13, CW=19, EN=26 (BCM).
 Suction pump uses separate GPIO pins (see suction_pump.py).
 """
