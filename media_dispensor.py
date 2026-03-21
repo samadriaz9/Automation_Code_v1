@@ -64,13 +64,13 @@ def _step(steps, direction_high):
 def Media_dispensor_up(steps):
     """Move media dispensor motor UP by the given number of steps."""
     print(f"Media Dispensor: moving UP {steps} steps")
-    _step(steps, direction_high=False)  # DIR LOW = UP
+    _step(steps, direction_high=True)  # DIR HIGH = UP
 
 
 def Media_dispensor_down(steps):
     """Move media dispensor motor DOWN by the given number of steps."""
     print(f"Media Dispensor: moving DOWN {steps} steps")
-    _step(steps, direction_high=True)  # DIR HIGH = DOWN
+    _step(steps, direction_high=False)  # DIR LOW = DOWN
 
 
 def Media_dispensor_home():
@@ -84,8 +84,8 @@ def Media_dispensor_home():
     _ensure_gpio()
     _ensure_i2c()
 
-    # Same direction and step pattern as Media_dispensor_down()
-    GPIO.output(DIR_PIN, GPIO.HIGH)
+    # Same direction and step pattern as Media_dispensor_down() (physical DOWN toward limit)
+    GPIO.output(DIR_PIN, GPIO.LOW)
 
     while True:
         p4 = _read_p4()
