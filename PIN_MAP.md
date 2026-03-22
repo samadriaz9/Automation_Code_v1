@@ -15,7 +15,7 @@ Use this to spot conflicts and free pins. **I2C** uses GPIO **2 & 3** (SDA/SCL) 
 | **media_dispensor** | 24 STEP, 27 DIR | EN tied on driver; physical pins 18 & 13 |
 | **suction_pipe** | 8 STEP, 20 DIR | EN tied on driver; **no** limit switch (up/down by steps only) |
 | **incubator_lid** | 6 STEP, 16 DIR | EN tied on driver; **no** limit; physical pins 31 & 36 |
-| **flask_suction_pump** (DC BTS) | **11** RPWM | Pin 23; **GPIO 4 free** for DS18B20; SPI off → GPIO 11 OK |
+| **suction_pump** (flask DC BTS) | **11** RPWM | Pin 23; **GPIO 4 free** for DS18B20; SPI off → GPIO 11 OK |
 | **filteration_suction_pump** (DC PWM) | **25** | |
 | **solinoid_value_to_filteration** | **26** | Filtration solenoid; pin 37; **not** UART (see `solinoid_value_to_filteration.py`) |
 | **relay_control** | *none* | I2C address **0x21** |

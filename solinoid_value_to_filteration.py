@@ -27,26 +27,26 @@ def _ensure_gpio():
     _initialized = True
 
 
-def solenoid_valve_on():
+def solinoid_value_to_filteration_on():
     """Open solenoid valve (filtration)."""
     _ensure_gpio()
     print("Filtration solenoid valve ON")
     GPIO.output(SOLENOID_PIN, GPIO.HIGH)
 
 
-def solenoid_valve_off():
+def solinoid_value_to_filteration_off():
     """Close solenoid valve (filtration)."""
     if _initialized:
         print("Filtration solenoid valve OFF")
         GPIO.output(SOLENOID_PIN, GPIO.LOW)
 
 
-def solenoid_valve(seconds):
-    """Open valve for given seconds."""
+def solinoid_value_to_filteration(seconds):
+    """Open valve for given seconds, then close."""
     seconds = max(0, float(seconds))
-    solenoid_valve_on()
+    solinoid_value_to_filteration_on()
     time.sleep(seconds)
-    solenoid_valve_off()
+    solinoid_value_to_filteration_off()
 
 
 def cleanup():
