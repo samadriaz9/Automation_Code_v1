@@ -77,9 +77,8 @@ def Media_dispensor_home():
     """
     Drive the media dispensor motor DOWN until the limit switch on P5 is pressed.
 
-    Inverted limit wiring on P5 (reverted behaviour):
-    P5 = 0 → not pressed
-    P5 = 1 → pressed (stop)
+    Standard PCF8574 + pull-up: P5 = 1 when not pressed, P5 = 0 when pressed (stop).
+    If your switch reads the opposite, change the `if p5 == 0` line to `if p5 == 1`.
     """
     print("Media Dispensor: homing DOWN until P5 limit switch is pressed")
 
@@ -92,7 +91,7 @@ def Media_dispensor_home():
     while True:
         p5 = _read_p5()
 
-        if p5 == 1:
+        if p5 == 0:
             print("P5 limit switch detected, stopping.")
             break
 
