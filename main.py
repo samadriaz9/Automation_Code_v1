@@ -159,6 +159,12 @@ signal.signal(signal.SIGTERM, _on_sigterm)
 atexit.register(shutdown_all)
 
 try:
+
+    x = input ('Enter 0: ')
+    filteration_suction_pump_on(90)
+    time.sleep(5)
+    filteration_suction_pump_off()
+
     x = input ('Enter 0: ')
     incubator_lid_up(100)
     incubator_lid_down(100)
