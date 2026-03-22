@@ -14,6 +14,7 @@ Use this to spot conflicts and free pins. **I2C** uses GPIO **2 & 3** (SDA/SCL) 
 | **camera_module** | 5 STEP, 7 DIR, **9 EN** | Only module still using **EN** in software |
 | **media_dispensor** | 24 STEP, 27 DIR | EN tied on driver; physical pins 18 & 13 |
 | **suction_pipe** | 8 STEP, 20 DIR | EN tied on driver; **no** limit switch (up/down by steps only) |
+| **incubator_lid** | 6 STEP, 16 DIR | EN tied on driver; **no** limit; physical pins 31 & 36 |
 | **suction_pump** (DC BTS) | **4** RPWM (single direction in code) | Add LPWM in code if you use reverse |
 | **filteration_suction_pump** (DC PWM) | **25** | |
 | **solinoid_value** | **14** | UART TX — use boot script or move pin (see `solinoid_value.py`) |
@@ -23,7 +24,7 @@ Use this to spot conflicts and free pins. **I2C** uses GPIO **2 & 3** (SDA/SCL) 
 
 ## Pins often still free on a Pi 3/4/5 (check your wiring)
 
-Typical unused if you only use the table above: **6, 8, 11, 16, 20, 26** (and more). Use these first before reusing anything.
+Typical unused if you only use the table above: **11, 26** (and more). Use these first before reusing anything.
 
 ## If you run out of pins
 

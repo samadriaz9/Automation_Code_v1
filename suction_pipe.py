@@ -39,13 +39,13 @@ def _step(steps, direction_high):
 def suction_pipe_up(steps):
     """Move suction pipe UP by the given number of steps."""
     print(f"Suction Pipe: moving UP {steps} steps")
-    _step(steps, direction_high=True)
+    _step(steps, direction_high=False)  # DIR LOW = physical UP
 
 
 def suction_pipe_down(steps):
     """Move suction pipe DOWN by the given number of steps."""
     print(f"Suction Pipe: moving DOWN {steps} steps")
-    _step(steps, direction_high=False)
+    _step(steps, direction_high=True)  # DIR HIGH = physical DOWN
 
 
 def suction_pipe_home():

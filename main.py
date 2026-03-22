@@ -8,6 +8,7 @@ Suction pump lift (stepper): STEP=21, DIR=12 (BCM); EN tied on hardware (see suc
 Petri dishes: STEP=10, DIR=22 (BCM); EN tied on hardware (see petri_dishes.py).
 Media dispensor: STEP=24, DIR=27 (BCM); physical pins 18 & 13 (see Media_dispensor.py).
 Suction pipe: STEP=8, DIR=20 (BCM); no limit switch — use up/down with steps only (see suction_pipe.py).
+Incubator lid: STEP=6, DIR=16 (BCM); physical pins 31 & 36; no limit (see incubator_lid.py).
 
 Shutdown: Ctrl+C runs full cleanup (see shutdown_all). SIGTERM (kill) also cleans up.
 """
@@ -90,6 +91,13 @@ from suction_pipe import (
     cleanup as suction_pipe_cleanup,
 )
 
+from incubator_lid import (
+    incubator_lid_home,
+    incubator_lid_up,
+    incubator_lid_down,
+    cleanup as incubator_lid_cleanup,
+)
+
 from solinoid_value import solenoid_valve_on, solenoid_valve_off, solenoid_valve, cleanup as solenoid_cleanup
 import RPi.GPIO as GPIO
 
@@ -119,6 +127,7 @@ def shutdown_all():
         ("camera", camera_cleanup),
         ("media_dispensor", media_dispensor_cleanup),
         ("suction_pipe", suction_pipe_cleanup),
+        ("incubator_lid", incubator_lid_cleanup),
     ):
         try:
             fn()
@@ -142,6 +151,10 @@ signal.signal(signal.SIGTERM, _on_sigterm)
 atexit.register(shutdown_all)
 
 try:
+    x = input ('Enter 0: ')
+    incubator_lid_up(100)
+    incubator_lid_down(100)
+    
     x = input ('Enter 1: ')
     
     Media_dispensor_home()
