@@ -13,12 +13,13 @@ Use this to spot conflicts and free pins. **I2C** uses GPIO **2 & 3** (SDA/SCL) 
 | **petri_dishes** | 10 STEP, 22 DIR | EN tied on driver |
 | **camera_module** | 5 STEP, 7 DIR, **9 EN** | Only module still using **EN** in software |
 | **media_dispensor** | 24 STEP, 27 DIR | EN tied on driver; physical pins 18 & 13 |
+| **suction_pipe** | 8 STEP, 20 DIR | EN tied on driver; **no** limit switch (up/down by steps only) |
 | **suction_pump** (DC BTS) | **4** RPWM (single direction in code) | Add LPWM in code if you use reverse |
 | **filteration_suction_pump** (DC PWM) | **25** | |
 | **solinoid_value** | **14** | UART TX — use boot script or move pin (see `solinoid_value.py`) |
 | **relay_control** | *none* | I2C address **0x21** |
 
-**PCF8574 @ 0x20 — limit inputs (shared bus):** P0 filtration flask, P2 suction lift, P3 camera, **P4 petri_dishes**, **P5 media_dispensor**, P6 filtration unit.
+**PCF8574 @ 0x20 — limit inputs (shared bus):** P0 filtration flask, P2 suction lift, P3 camera, **P4 petri_dishes**, **P5 media_dispensor**, P6 filtration unit. (P1/P7 free if you add more limits.)
 
 ## Pins often still free on a Pi 3/4/5 (check your wiring)
 

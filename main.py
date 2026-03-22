@@ -7,6 +7,7 @@ Filteration unit: STEP=13, DIR=19 (BCM); EN tied on hardware (see filteration_un
 Suction pump lift (stepper): STEP=21, DIR=12 (BCM); EN tied on hardware (see suction_pump_up_down.py). DC pump: suction_pump.py.
 Petri dishes: STEP=10, DIR=22 (BCM); EN tied on hardware (see petri_dishes.py).
 Media dispensor: STEP=24, DIR=27 (BCM); physical pins 18 & 13 (see Media_dispensor.py).
+Suction pipe: STEP=8, DIR=20 (BCM); no limit switch — use up/down with steps only (see suction_pipe.py).
 
 Shutdown: Ctrl+C runs full cleanup (see shutdown_all). SIGTERM (kill) also cleans up.
 """
@@ -82,6 +83,13 @@ from media_dispensor import (
     cleanup as media_dispensor_cleanup,
 )
 
+from suction_pipe import (
+    suction_pipe_home,
+    suction_pipe_up,
+    suction_pipe_down,
+    cleanup as suction_pipe_cleanup,
+)
+
 from solinoid_value import solenoid_valve_on, solenoid_valve_off, solenoid_valve, cleanup as solenoid_cleanup
 import RPi.GPIO as GPIO
 
@@ -110,6 +118,7 @@ def shutdown_all():
         ("petri_dishes", petri_dishes_cleanup),
         ("camera", camera_cleanup),
         ("media_dispensor", media_dispensor_cleanup),
+        ("suction_pipe", suction_pipe_cleanup),
     ):
         try:
             fn()
@@ -159,7 +168,12 @@ try:
     x= input ('Enter 6: ')
     #media pad + petri dish
     suction_pump_home()   # step 1
-    suction_pump_up(250)  # step 2
+    x = input ('Enter 7: ')
+    suction_pipe_up(100)
+
+    x = input ('Enter 8: ')
+    suction_pipe_down(100)
+
     
     x = input ("Enter 7: ")
     filteration_unit_config()
