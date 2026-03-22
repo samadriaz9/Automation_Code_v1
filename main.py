@@ -138,10 +138,10 @@ try:
     Media_dispensor_home()
     x= input ('Enter 2: ')
     
-    Media_dispensor_down(3500)
+    Media_dispensor_up(3500)
     
     x = input ('Enter 3: ')
-    Media_dispensor_up(800)
+    Media_dispensor_down(800)
     
     x = input ('Enter 4: ')
     Consumable_down(400)
