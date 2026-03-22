@@ -4,11 +4,12 @@ Runs homing (down until limit switch via PCF8574) and then movements.
 
 Filteration flask: STEP=18, DIR=23 (BCM); EN tied on hardware (see filteration_flask.py).
 Filteration unit: STEP=13, DIR=19 (BCM); EN tied on hardware (see filteration_unit.py).
-Suction pump lift (stepper): STEP=21, DIR=12 (BCM); EN tied on hardware (see suction_pump_up_down.py). DC pump: suction_pump.py.
+Suction pump lift (stepper): STEP=21, DIR=12 (BCM); EN tied on hardware (see suction_pump_up_down.py). Flask DC pump: GPIO 11 RPWM (see flask_suction_pump.py); leave GPIO 4 for DS18B20.
 Petri dishes: STEP=10, DIR=22 (BCM); EN tied on hardware (see petri_dishes.py).
 Media dispensor: STEP=24, DIR=27 (BCM); physical pins 18 & 13 (see Media_dispensor.py).
 Suction pipe: STEP=8, DIR=20 (BCM); no limit switch — use up/down with steps only (see suction_pipe.py).
 Incubator lid: STEP=6, DIR=16 (BCM); physical pins 31 & 36; no limit (see incubator_lid.py).
+Filtration solenoid: GPIO 26 (BCM), pin 37 (see solinoid_value_to_filteration.py).
 
 Shutdown: Ctrl+C runs full cleanup (see shutdown_all). SIGTERM (kill) also cleans up.
 """
@@ -35,8 +36,10 @@ from filteration_unit import (
     filteration_unit_config,
     cleanup as filteration_unit_cleanup,
 )
-from suction_pump import (
-    suction_pump,suction_pump_on, suction_pump_off,
+from flask_suction_pump import (
+    suction_pump,
+    suction_pump_on,
+    suction_pump_off,
     cleanup as suction_cleanup,
 )
 from consumable import (
@@ -98,7 +101,12 @@ from incubator_lid import (
     cleanup as incubator_lid_cleanup,
 )
 
-from solinoid_value import solenoid_valve_on, solenoid_valve_off, solenoid_valve, cleanup as solenoid_cleanup
+from solinoid_value_to_filteration import (
+    solenoid_valve_on,
+    solenoid_valve_off,
+    solenoid_valve,
+    cleanup as solenoid_cleanup,
+)
 import RPi.GPIO as GPIO
 
 # --- Run once: stops PWM/relays/solenoid and releases GPIO (helps avoid drivers heating when idle) ---
@@ -154,7 +162,7 @@ try:
     x = input ('Enter 0: ')
     incubator_lid_up(100)
     incubator_lid_down(100)
-    
+
     x = input ('Enter 1: ')
     
     Media_dispensor_home()

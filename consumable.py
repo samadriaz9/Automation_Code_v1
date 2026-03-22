@@ -1,7 +1,7 @@
 import RPi.GPIO as GPIO
 import time
 
-# Consumable stepper motor pins (BCM) — STEP + DIR only (frees GPIO 14 for solenoid / other use).
+# Consumable stepper motor pins (BCM) — STEP + DIR only (EN tied on hardware).
 # Hardware: tie EN+ on the driver to GND (typical: EN active-LOW).
 STEP_PIN = 17   # CLK+
 DIR_PIN = 15    # CW+
