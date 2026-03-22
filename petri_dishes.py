@@ -7,7 +7,7 @@ import smbus
 STEP_PIN = 10   # CLK+
 DIR_PIN = 22    # CW+
 
-# PCF8574 I2C expander (limit switch on P5)
+# PCF8574 I2C expander (limit switch on P4 — swapped with media_dispensor, which uses P5)
 PCF8574_ADDRESS = 0x20  # Adjust if your module uses a different address
 
 delay = 0.001   # speed control
@@ -40,11 +40,11 @@ def _ensure_i2c():
         _i2c_initialized = True
 
 
-def _read_p5():
-    """Read state of P5 from PCF8574 (returns 0 or 1)."""
+def _read_p4():
+    """Read state of P4 from PCF8574 (returns 0 or 1)."""
     _ensure_i2c()
     value = _bus.read_byte(PCF8574_ADDRESS)
-    return (value >> 5) & 0x01  # ✅ bit 5 is P5
+    return (value >> 4) & 0x01  # bit 4 = P4
 
 
 def _step(steps, direction_high):
@@ -75,9 +75,9 @@ def petri_dishes_down(steps):
 
 def petri_dishes_home():
     """
-    Drive toward the limit switch on P5 until pressed (switch on opposite side from before).
+    Drive toward the limit switch on P4 until pressed (switch on opposite side from before).
 
-    Assumes P5 is pulled HIGH normally and goes LOW (0) when the switch is pressed.
+    Assumes P4 is pulled HIGH normally and goes LOW (0) when the switch is pressed.
     If the stage runs away from the switch instead, flip `toward_limit` below.
     """
     _ensure_gpio()
@@ -86,11 +86,11 @@ def petri_dishes_home():
     # Direction that moves the stage toward the limit (was DOWN+inverted pulses; now UP with same _step() pattern)
     toward_limit = True  # same as petri_dishes_up after direction swap
 
-    print("Petri Dishes: homing until P5 limit switch (PCF8574) is pressed")
+    print("Petri Dishes: homing until P4 limit switch (PCF8574) is pressed")
 
     while True:
-        if _read_p5() == 0:
-            print("P5 limit switch detected, stopping.")
+        if _read_p4() == 0:
+            print("P4 limit switch detected, stopping.")
             break
         _step(1, direction_high=toward_limit)
 

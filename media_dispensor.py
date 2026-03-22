@@ -9,7 +9,7 @@ STEP_PIN = 24   # CLK+
 DIR_PIN = 27    # CW+
 # No EN pin — tie EN on driver hardware (GND if active-low enable)
 
-# PCF8574 I2C expander (limit switch on P4)
+# PCF8574 I2C expander (limit switch on P5 — swapped with petri_dishes, which uses P4)
 PCF8574_ADDRESS = 0x20
 
 delay = 0.001   # speed control
@@ -42,11 +42,11 @@ def _ensure_i2c():
         _i2c_initialized = True
 
 
-def _read_p4():
-    """Read state of P4 from PCF8574 (returns 0 or 1)."""
+def _read_p5():
+    """Read state of P5 from PCF8574 (returns 0 or 1)."""
     _ensure_i2c()
     value = _bus.read_byte(PCF8574_ADDRESS)
-    return (value >> 4) & 0x01  # bit 4 = P4
+    return (value >> 5) & 0x01  # bit 5 = P5
 
 
 def _step(steps, direction_high):
@@ -75,28 +75,30 @@ def Media_dispensor_down(steps):
 
 def Media_dispensor_home():
     """
-    Drive the media dispensor motor DOWN until the limit switch on P4 is pressed.
+    Drive the media dispensor motor DOWN until the limit switch on P5 is pressed.
 
-    Wiring (corrected): P4 = 1 when not pressed (pull-up), P4 = 0 when pressed.
+    Inverted limit wiring on P5 (reverted behaviour):
+    P5 = 0 → not pressed
+    P5 = 1 → pressed (stop)
     """
-    print("Media Dispensor: homing DOWN until P4 limit switch is pressed")
+    print("Media Dispensor: homing DOWN until P5 limit switch is pressed")
 
     _ensure_gpio()
     _ensure_i2c()
 
-    # Same direction and step pattern as Media_dispensor_down() (physical DOWN toward limit)
+    # Same DIR as Media_dispensor_down(); step edge order matches original working homing
     GPIO.output(DIR_PIN, GPIO.LOW)
 
     while True:
-        p4 = _read_p4()
+        p5 = _read_p5()
 
-        if p4 == 0:
-            print("P4 limit switch detected, stopping.")
+        if p5 == 1:
+            print("P5 limit switch detected, stopping.")
             break
 
-        GPIO.output(STEP_PIN, GPIO.HIGH)
-        time.sleep(delay)
         GPIO.output(STEP_PIN, GPIO.LOW)
+        time.sleep(delay)
+        GPIO.output(STEP_PIN, GPIO.HIGH)
         time.sleep(delay)
 
 

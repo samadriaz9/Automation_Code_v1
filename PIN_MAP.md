@@ -18,6 +18,8 @@ Use this to spot conflicts and free pins. **I2C** uses GPIO **2 & 3** (SDA/SCL) 
 | **solinoid_value** | **14** | UART TX — use boot script or move pin (see `solinoid_value.py`) |
 | **relay_control** | *none* | I2C address **0x21** |
 
+**PCF8574 @ 0x20 — limit inputs (shared bus):** P0 filtration flask, P2 suction lift, P3 camera, **P4 petri_dishes**, **P5 media_dispensor**, P6 filtration unit.
+
 ## Pins often still free on a Pi 3/4/5 (check your wiring)
 
 Typical unused if you only use the table above: **6, 8, 11, 16, 20, 26** (and more). Use these first before reusing anything.
