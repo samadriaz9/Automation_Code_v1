@@ -114,6 +114,12 @@ from solinoid_value_drain import (
     solinoid_value_drain_off,
     cleanup as drain_solenoid_cleanup,
 )
+from solinoid_waste import (
+    solinoid_waste,
+    solinoid_waste_on,
+    solinoid_waste_off,
+    cleanup as waste_solenoid_cleanup,
+)
 import RPi.GPIO as GPIO
 
 # --- Run once: stops PWM/relays/solenoid and releases GPIO (helps avoid drivers heating when idle) ---
@@ -136,6 +142,7 @@ def shutdown_all():
         ("relay", relay_cleanup),
         ("solenoid", solenoid_cleanup),
         ("drain_solenoid", drain_solenoid_cleanup),
+        ("waste_solenoid", waste_solenoid_cleanup),
         ("consumable", consumable_cleanup),
         ("filteration_flask", filteration_cleanup),
         ("filteration_unit", filteration_unit_cleanup),
@@ -168,6 +175,11 @@ atexit.register(shutdown_all)
 
 try:
     x = input ('Enter 0: ')
+    solinoid_waste_on()
+    time.sleep(2)
+    solinoid_waste_off()
+
+    x = input ('Enter 0: ')
     solinoid_value_drain_on()
     time.sleep(2)
     solinoid_value_drain_off()
@@ -180,8 +192,6 @@ try:
 
     x = input ('Enter 0: ')
     solinoid_value_to_filteration_on()
-    time.sleep(2)
-    solinoid_value_to_filteration_off() 
 
     x = input ('Enter 0: ')
     filteration_suction_pump_on(90)
@@ -266,7 +276,7 @@ try:
     
     #solinoid
     x= input ("Enter 11: ")
-    solinoid_value_to_filteration(2)
+    solinoid_value_to_filteration()
     
     x = input ("Enter 12: ")
     filteration_suction_pump_on(90)

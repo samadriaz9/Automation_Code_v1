@@ -4,6 +4,8 @@ Solenoid valve for filtration line (BCM numbering).
 Uses GPIO 26 — this avoids UART TX (GPIO 14) which can sit HIGH at boot and energize the valve
 before Python runs. Physical header pin 37.
 
+Water-level sensor is read on GPIO 1 (pin 28). When level becomes HIGH, filtration solenoid is turned OFF.
+
 See also: scripts/README_SOLENOID_BOOT.md if you need a boot-time LOW on this pin.
 """
 import RPi.GPIO as GPIO
@@ -11,6 +13,7 @@ import time
 
 # BCM
 SOLENOID_PIN = 26
+WATER_LEVEL_PIN = 1  # BCM, pin 28
 
 _initialized = False
 
@@ -24,6 +27,7 @@ def _ensure_gpio():
 
     GPIO.setmode(GPIO.BCM)
     GPIO.setup(SOLENOID_PIN, GPIO.OUT, initial=GPIO.LOW)
+    GPIO.setup(WATER_LEVEL_PIN, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
     _initialized = True
 
 
@@ -41,12 +45,41 @@ def solinoid_value_to_filteration_off():
         GPIO.output(SOLENOID_PIN, GPIO.LOW)
 
 
-def solinoid_value_to_filteration(seconds):
-    """Open valve for given seconds, then close."""
-    seconds = max(0, float(seconds))
+def water_level_reached():
+    """Return True when level sensor input is HIGH."""
+    _ensure_gpio()
+    return GPIO.input(WATER_LEVEL_PIN) == GPIO.HIGH
+
+
+def solinoid_value_to_filteration(seconds=None, timeout_seconds=120, poll_seconds=0.05):
+    """
+    Open filtration valve, then close.
+
+    - If `seconds` is provided: timed behavior (legacy).
+    - If `seconds` is None: keep valve ON until water level sensor is HIGH
+      (or until timeout for safety).
+    """
+    _ensure_gpio()
     solinoid_value_to_filteration_on()
-    time.sleep(seconds)
-    solinoid_value_to_filteration_off()
+    try:
+        if seconds is not None:
+            time.sleep(max(0, float(seconds)))
+            return
+
+        timeout_seconds = max(0, float(timeout_seconds))
+        poll_seconds = max(0.01, float(poll_seconds))
+        start = time.time()
+
+        while True:
+            if water_level_reached():
+                print("Water level reached -> Filtration solenoid OFF")
+                break
+            if timeout_seconds and (time.time() - start) >= timeout_seconds:
+                print("Filtration solenoid timeout -> OFF")
+                break
+            time.sleep(poll_seconds)
+    finally:
+        solinoid_value_to_filteration_off()
 
 
 def cleanup():

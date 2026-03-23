@@ -19,6 +19,8 @@ Use this to spot conflicts and free pins. **I2C** uses GPIO **2 & 3** (SDA/SCL) 
 | **filteration_suction_pump** (DC PWM) | **25** | |
 | **solinoid_value_to_filteration** | **26** | Filtration solenoid; pin 37; avoids UART TX (see `solinoid_value_to_filteration.py`) |
 | **solinoid_value_drain** | **9** | Drain solenoid; pin 21; boot-safe service available |
+| **solinoid_waste** | **0** | Waste solenoid; pin 27; HAT EEPROM disabled required |
+| **water_level_sensor** | **1** (input) | Pin 28; read by `solinoid_value_to_filteration.py` |
 | **relay_control** | *none* | I2C address **0x21** |
 
 **PCF8574 @ 0x20 — limit inputs (shared bus):** P0 filtration flask, P2 suction lift, P3 camera, **P4 petri_dishes**, **P5 media_dispensor**, P6 filtration unit. (P1/P7 free if you add more limits.)
