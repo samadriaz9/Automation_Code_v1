@@ -181,8 +181,8 @@ try:
     time.sleep(3)
     run_relay(P7, 3)
     print("camera off")
-    run_relay(P0, 10)
-    
+    run_relay(P1, 10)
+
 
     x = input ('Enter 0: ')
     solinoid_waste_on()
