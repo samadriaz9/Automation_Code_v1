@@ -16,7 +16,7 @@ P6 = 6
 P7 = 7
 
 # Only these channels are used as relays in current wiring.
-RELAY_CHANNELS = (P6, P7)
+RELAY_CHANNELS = (P0, P7)
 
 # Convenience relay-number aliases (many relay boards label relays as 1..8)
 RELAY1 = 0
