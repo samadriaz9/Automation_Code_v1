@@ -14,6 +14,7 @@ Filtration solenoid: GPIO 26 (BCM), pin 37 (see solinoid_value_to_filteration.py
 Shutdown: Ctrl+C runs full cleanup (see shutdown_all). SIGTERM (kill) also cleans up.
 """
 import atexit
+from pdb import run
 import signal
 import sys
 import time
@@ -174,10 +175,14 @@ signal.signal(signal.SIGTERM, _on_sigterm)
 atexit.register(shutdown_all)
 
 try:
-
+    print("camera on")
     x = input ('Enter 0: ')
-    run_relay(P6, 2)
-    run_relay(P7, 2)
+    run_relay(P7, 3)
+    time.sleep(3)
+    run_relay(P7, 3)
+    print("camera off")
+    run_relay(P0, 10)
+    
 
     x = input ('Enter 0: ')
     solinoid_waste_on()
