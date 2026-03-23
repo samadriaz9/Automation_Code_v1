@@ -174,6 +174,11 @@ signal.signal(signal.SIGTERM, _on_sigterm)
 atexit.register(shutdown_all)
 
 try:
+
+    x = input ('Enter 0: ')
+    run_relay(P6, 2)
+    run_relay(P7, 2)
+
     x = input ('Enter 0: ')
     solinoid_waste_on()
     time.sleep(2)

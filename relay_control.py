@@ -3,7 +3,7 @@ import smbus
 
 # Second PCF8574 used for relays (cascaded board)
 # First board is typically at 0x20; second at 0x21.
-RELAY_PCF8574_ADDRESS = 0x21
+RELAY_PCF8574_ADDRESS = 0x20
 
 # Convenience channel constants (PCF8574 pins)
 P0 = 0
@@ -14,6 +14,9 @@ P4 = 4
 P5 = 5
 P6 = 6
 P7 = 7
+
+# Only these channels are used as relays in current wiring.
+RELAY_CHANNELS = (P6, P7)
 
 # Convenience relay-number aliases (many relay boards label relays as 1..8)
 RELAY1 = 0
@@ -60,8 +63,8 @@ def set_relay(channel: int, on: bool):
     on=False -> relay OFF (bit driven HIGH)
     """
     global _state
-    if not 0 <= channel <= 7:
-        raise ValueError("channel must be between 0 and 7")
+    if channel not in RELAY_CHANNELS:
+        raise ValueError(f"channel must be one of {RELAY_CHANNELS}")
 
     mask = 1 << channel
     if on:
@@ -76,10 +79,10 @@ def set_relay(channel: int, on: bool):
 
 def run_relay_sequence():
     """
-    Run P0, P1, P2, P3, P4 each ON for 2 seconds, one after another.
+    Run only relay channels (P6, P7) ON for 2 seconds, one after another.
     """
     _ensure_i2c()
-    for ch in range(5):  # P0..P4
+    for ch in RELAY_CHANNELS:
         print(f"Relay on P{ch}: ON")
         set_relay(ch, True)
         time.sleep(2)
