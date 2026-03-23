@@ -11,22 +11,23 @@ Use this to spot conflicts and free pins. **I2C** uses GPIO **2 & 3** (SDA/SCL) 
 | **suction_pump_up_down** (stepper lift) | 21 STEP, 12 DIR | EN tied on driver |
 | **consumable** | 17 STEP, 15 DIR | EN tied on driver (GPIO 14 freed) |
 | **petri_dishes** | 10 STEP, 22 DIR | EN tied on driver |
-| **camera_module** | 5 STEP, 7 DIR, **9 EN** | Only module still using **EN** in software |
+| **camera_module** | 5 STEP, 7 DIR, **9 EN** | If USB camera path is used, GPIO 9 can be reassigned |
 | **media_dispensor** | 24 STEP, 27 DIR | EN tied on driver; physical pins 18 & 13 |
 | **suction_pipe** | 8 STEP, 20 DIR | EN tied on driver; **no** limit switch (up/down by steps only) |
 | **incubator_lid** | 6 STEP, 16 DIR | EN tied on driver; **no** limit; physical pins 31 & 36 |
-| **upper_suction_pump** (upper DC BTS) | **14** RPWM | Pin 8; **GPIO 4 free** for DS18B20; SPI off → GPIO 14 OK |
+| **upper_suction_pump** (upper DC BTS) | **11** RPWM | Pin 23; **GPIO 4 free** for DS18B20; SPI off → GPIO 11 OK |
 | **filteration_suction_pump** (DC PWM) | **25** | |
 | **solinoid_value_to_filteration** | **26** | Filtration solenoid; pin 37; avoids UART TX (see `solinoid_value_to_filteration.py`) |
+| **solinoid_value_drain** | **9** | Drain solenoid; pin 21; boot-safe service available |
 | **relay_control** | *none* | I2C address **0x21** |
 
 **PCF8574 @ 0x20 — limit inputs (shared bus):** P0 filtration flask, P2 suction lift, P3 camera, **P4 petri_dishes**, **P5 media_dispensor**, P6 filtration unit. (P1/P7 free if you add more limits.)
 
-**DS18B20 temperature sensor:** use **GPIO 4** (pin 7) with `dtoverlay=w1-gpio` — do **not** use GPIO 4 for anything else (upper DC pump moved to GPIO 14).
+**DS18B20 temperature sensor:** use **GPIO 4** (pin 7) with `dtoverlay=w1-gpio` — do **not** use GPIO 4 for anything else (upper DC pump moved to GPIO 11).
 
 ## Pins often still free on a Pi 3/4/5 (check your wiring)
 
-After upper_suction_pump on **GPIO 14**, typical remaining: **26** (and more). Use these first before reusing anything.
+After upper_suction_pump on **GPIO 11**, typical remaining: **26** (and more). Use these first before reusing anything.
 
 ## If you run out of pins
 
@@ -40,5 +41,5 @@ After upper_suction_pump on **GPIO 14**, typical remaining: **26** (and more). U
 
 | Change | Frees |
 |--------|--------|
-| consumable: EN tied on hardware (done in code) | **GPIO 14** freed (now used by upper_suction_pump PWM) |
-| camera: EN tied on hardware (if you update `camera_module.py` like other steppers) | **GPIO 9** |
+| consumable: EN tied on hardware (done in code) | **GPIO 14** freed (no longer used by upper_suction_pump PWM) |
+| camera: EN tied on hardware (if you update `camera_module.py` like other steppers) | **GPIO 9** (used by drain solenoid now) |

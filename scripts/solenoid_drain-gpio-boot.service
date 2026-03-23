@@ -1,0 +1,14 @@
+[Unit]
+Description=Force drain solenoid GPIO safe (LOW) at boot
+After=local-fs.target sysinit.target
+Before=multi-user.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+Environment=SOLENOID_BOOT_PIN=9
+ExecStart=/usr/local/bin/solenoid_boot_safe.sh
+
+[Install]
+WantedBy=multi-user.target
+

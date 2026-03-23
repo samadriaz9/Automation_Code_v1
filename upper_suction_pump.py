@@ -1,17 +1,15 @@
 """
 Upper flask DC suction pump (BTS7960 / IBT-2 style — single RPWM PWM line in code).
 
-RPWM pin: GPIO 14 (physical header pin 8).
+RPWM pin: GPIO 11 (physical header pin 23).
 Use **GPIO 4** for DS18B20 1-Wire temperature sensor (do not share PWM and 1-Wire).
 
-Note: GPIO 14 is UART TX when serial console is enabled; if your BTS7960 input turns on
-while the line is HIGH at boot, consider disabling serial console on GPIO 14/15
-or add a small boot-time GPIO-safe script for this PWM line.
+GPIO 11 is a non-UART pin, so it typically does not glitch at boot like UART pins can.
 """
 import RPi.GPIO as GPIO
 import time
 
-RPWM_PIN = 14  # BCM — upper suction pump RPWM (physical pin 8)
+RPWM_PIN = 11  # BCM — upper suction pump RPWM (physical pin 23)
 
 _pwm_initialized = False
 rpwm = None
@@ -24,7 +22,8 @@ def _ensure_pwm():
         return
 
     GPIO.setmode(GPIO.BCM)
-    GPIO.setup(RPWM_PIN, GPIO.OUT)
+    # Force OFF immediately when the module loads.
+    GPIO.setup(RPWM_PIN, GPIO.OUT, initial=GPIO.LOW)
 
     rpwm = GPIO.PWM(RPWM_PIN, 1000)
     rpwm.start(0)

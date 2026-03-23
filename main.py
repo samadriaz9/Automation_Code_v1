@@ -4,7 +4,7 @@ Runs homing (down until limit switch via PCF8574) and then movements.
 
 Filteration flask: STEP=18, DIR=23 (BCM); EN tied on hardware (see filteration_flask.py).
 Filteration unit: STEP=13, DIR=19 (BCM); EN tied on hardware (see filteration_unit.py).
-Suction pump lift (stepper): STEP=21, DIR=12 (BCM); EN tied on hardware (see suction_pump_up_down.py). Flask/upper DC pump: GPIO 14 RPWM (see upper_suction_pump.py); leave GPIO 4 for DS18B20.
+Suction pump lift (stepper): STEP=21, DIR=12 (BCM); EN tied on hardware (see suction_pump_up_down.py). Flask/upper DC pump: GPIO 11 RPWM (see upper_suction_pump.py); leave GPIO 4 for DS18B20.
 Petri dishes: STEP=10, DIR=22 (BCM); EN tied on hardware (see petri_dishes.py).
 Media dispensor: STEP=24, DIR=27 (BCM); physical pins 18 & 13 (see Media_dispensor.py).
 Suction pipe: STEP=8, DIR=20 (BCM); no limit switch — use up/down with steps only (see suction_pipe.py).
@@ -108,6 +108,12 @@ from solinoid_value_to_filteration import (
     solinoid_value_to_filteration_off,
     cleanup as solenoid_cleanup,
 )
+from solinoid_value_drain import (
+    solinoid_value_drain,
+    solinoid_value_drain_on,
+    solinoid_value_drain_off,
+    cleanup as drain_solenoid_cleanup,
+)
 import RPi.GPIO as GPIO
 
 # --- Run once: stops PWM/relays/solenoid and releases GPIO (helps avoid drivers heating when idle) ---
@@ -129,6 +135,7 @@ def shutdown_all():
         ("suction_pump_up_down", suction_lift_cleanup),
         ("relay", relay_cleanup),
         ("solenoid", solenoid_cleanup),
+        ("drain_solenoid", drain_solenoid_cleanup),
         ("consumable", consumable_cleanup),
         ("filteration_flask", filteration_cleanup),
         ("filteration_unit", filteration_unit_cleanup),
@@ -160,6 +167,11 @@ signal.signal(signal.SIGTERM, _on_sigterm)
 atexit.register(shutdown_all)
 
 try:
+    x = input ('Enter 0: ')
+    solinoid_value_drain_on()
+    time.sleep(2)
+    solinoid_value_drain_off()
+
     x= input ('Enter 0: ')
 
     upper_suction_pump_on(100)
