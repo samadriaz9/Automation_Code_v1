@@ -14,7 +14,7 @@ import time
 # BCM
 SOLENOID_PIN = 26
 WATER_LEVEL_PIN = 1  # BCM, pin 28
-WATER_LEVEL_ACTIVE_LOW = True  # 2-wire switch wired between GPIO and GND
+WATER_LEVEL_ACTIVE_LOW = False  # Set True only if your sensor is active-LOW
 
 _initialized = False
 
