@@ -1,6 +1,6 @@
 #!/bin/bash
 # Run at boot to keep the solenoid GPIO in a safe OFF state before your app runs.
-# GPIO 14 is UART TX — without this, the pin can sit HIGH at boot and turn the valve ON.
+# GPIO 14 is UART TX; we moved the solenoid to GPIO 26 to keep it OFF at boot safely.
 #
 # Install (once on the Pi):
 #   sudo cp scripts/solenoid_boot_safe.sh /usr/local/bin/
@@ -9,8 +9,8 @@
 #   sudo systemctl enable solenoid-gpio-boot.service
 #   sudo systemctl start solenoid-gpio-boot.service
 #
-# Must match SOLENOID_PIN in solinoid_value_to_filteration.py (default 14)
-PIN="${SOLENOID_BOOT_PIN:-14}"
+# Must match SOLENOID_PIN in solinoid_value_to_filteration.py (default 26)
+PIN="${SOLENOID_BOOT_PIN:-26}"
 
 if command -v raspi-gpio >/dev/null 2>&1; then
   # Output, drive low (valve OFF if your driver is active-HIGH)

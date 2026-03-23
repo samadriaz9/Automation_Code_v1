@@ -4,7 +4,7 @@ Runs homing (down until limit switch via PCF8574) and then movements.
 
 Filteration flask: STEP=18, DIR=23 (BCM); EN tied on hardware (see filteration_flask.py).
 Filteration unit: STEP=13, DIR=19 (BCM); EN tied on hardware (see filteration_unit.py).
-Suction pump lift (stepper): STEP=21, DIR=12 (BCM); EN tied on hardware (see suction_pump_up_down.py). Flask DC pump: suction_pump.py.
+Suction pump lift (stepper): STEP=21, DIR=12 (BCM); EN tied on hardware (see suction_pump_up_down.py). Flask DC pump: upper_suction_pump.py.
 Petri dishes: STEP=10, DIR=22 (BCM); EN tied on hardware (see petri_dishes.py).
 """
 from filteration_flask import (
@@ -19,7 +19,7 @@ from filteration_unit import (
     filteration_unit_config,
     cleanup as filteration_unit_cleanup,
 )
-from suction_pump import cleanup as suction_cleanup
+from upper_suction_pump import cleanup as suction_cleanup
 from consumables import (consumable_up,
     consumable_down)
 import RPi.GPIO as GPIO

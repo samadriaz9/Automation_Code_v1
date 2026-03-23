@@ -1,17 +1,17 @@
 """
-Flask DC suction pump (BTS7960 / IBT-2 style — single RPWM PWM line in code).
+Upper flask DC suction pump (BTS7960 / IBT-2 style — single RPWM PWM line in code).
 
-**GPIO 4 is NOT used** so you can use **GPIO 4** for a DS18B20 1-Wire temperature sensor
-(default `w1-gpio` on many Pi images). Do not connect both pump PWM and 1-Wire to the same pin.
+RPWM pin: GPIO 14 (physical header pin 8).
+Use **GPIO 4** for DS18B20 1-Wire temperature sensor (do not share PWM and 1-Wire).
 
-**RPWM** default: **GPIO 26** (physical pin 37). With **SPI disabled** (raspi-config), this GPIO is free for PWM.
-
-LPWM / REN / LEN: wire per your BTS7960 board (same idea as other DC motor modules).
+Note: GPIO 14 is UART TX when serial console is enabled; if your BTS7960 input turns on
+while the line is HIGH at boot, consider disabling serial console on GPIO 14/15
+or add a small boot-time GPIO-safe script for this PWM line.
 """
 import RPi.GPIO as GPIO
 import time
 
-RPWM_PIN = 26  # BCM — RPWM for upper flask suction pump (physical pin 37)
+RPWM_PIN = 14  # BCM — upper suction pump RPWM (physical pin 8)
 
 _pwm_initialized = False
 rpwm = None
@@ -33,19 +33,19 @@ def _ensure_pwm():
 
 
 def suction_pump_on(speed):
-    """Start suction pump continuously."""
+    """Start upper suction pump continuously."""
     _ensure_pwm()
 
     speed = max(0, min(100, float(speed)))
-    print(f"Suction pump ON: {speed:.1f}%")
+    print(f"Upper suction pump ON: {speed:.1f}%")
 
     rpwm.ChangeDutyCycle(speed)
 
 
 def suction_pump_off():
-    """Stop suction pump."""
+    """Stop upper suction pump."""
     if _pwm_initialized:
-        print("Suction pump OFF")
+        print("Upper suction pump OFF")
         rpwm.ChangeDutyCycle(0)
 
 
@@ -57,6 +57,7 @@ def suction_pump(speed, seconds):
 
 
 def cleanup():
+    """Call once when program exits."""
     global _pwm_initialized, rpwm
     if _pwm_initialized:
         try:
@@ -64,3 +65,4 @@ def cleanup():
         except Exception:
             pass
         _pwm_initialized = False
+
