@@ -38,9 +38,9 @@ from filteration_unit import (
     cleanup as filteration_unit_cleanup,
 )
 from upper_suction_pump import (
-    suction_pump,
-    suction_pump_on,
-    suction_pump_off,
+    upper_suction_pump,
+    upper_suction_pump_on,
+    upper_suction_pump_off,
     cleanup as suction_cleanup,
 )
 from consumable import (
@@ -125,7 +125,7 @@ def shutdown_all():
     # Stop DC/PWM and relays first; then stepper modules; solenoid off; GPIO.cleanup last.
     for name, fn in (
         ("filteration_suction_pump", filteration_suction_cleanup),
-        ("suction_pump (DC)", suction_cleanup),
+    ("upper_suction_pump (DC)", suction_cleanup),
         ("suction_pump_up_down", suction_lift_cleanup),
         ("relay", relay_cleanup),
         ("solenoid", solenoid_cleanup),
@@ -160,8 +160,12 @@ signal.signal(signal.SIGTERM, _on_sigterm)
 atexit.register(shutdown_all)
 
 try:
+    x= input ('Enter 0: ')
 
-    
+    upper_suction_pump_on(100)
+    time.sleep(2)
+    upper_suction_pump_off()
+
     x = input ('Enter 0: ')
     solinoid_value_to_filteration_on()
     time.sleep(2)
@@ -212,10 +216,10 @@ try:
     x = input ("Enter 7: ")
     
     Consumable_up(290)    # step 3
-    suction_pump_on(100)
+    upper_suction_pump_on(100)
     time.sleep(1)
     suction_pump_up(3110)
-    suction_pump_off()
+    upper_suction_pump_off()
     Consumable_down(290)
     
     x = input ("Enter 8: ")
@@ -230,11 +234,11 @@ try:
     suction_pump_home()
     suction_pump_up(420)
     Consumable_up(310)
-    suction_pump_on(35)
+    upper_suction_pump_on(35)
     time.sleep(2)
     Consumable_down(310)
     suction_pump_up(1220)
-    suction_pump_off()
+    upper_suction_pump_off()
     Consumable_down(290)
     
     x = input ("Enter 10: ")
@@ -263,10 +267,10 @@ try:
     
     
     x= input ("Enter 12: ") #carefully observe
-    suction_pump_on(100)
+    upper_suction_pump_on(100)
     time.sleep(5)
     suction_pump_up(1820)
-    suction_pump_off()
+    upper_suction_pump_off()
     time.sleep(3)
     suction_pump_down(1820)
     

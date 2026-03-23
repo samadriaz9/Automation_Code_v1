@@ -32,7 +32,7 @@ def _ensure_pwm():
     _pwm_initialized = True
 
 
-def suction_pump_on(speed):
+def upper_suction_pump_on(speed):
     """Start upper suction pump continuously."""
     _ensure_pwm()
 
@@ -42,18 +42,18 @@ def suction_pump_on(speed):
     rpwm.ChangeDutyCycle(speed)
 
 
-def suction_pump_off():
+def upper_suction_pump_off():
     """Stop upper suction pump."""
     if _pwm_initialized:
         print("Upper suction pump OFF")
         rpwm.ChangeDutyCycle(0)
 
 
-def suction_pump(speed, seconds):
+def upper_suction_pump(speed, seconds):
     """Run at speed % for seconds (blocking)."""
-    suction_pump_on(speed)
+    upper_suction_pump_on(speed)
     time.sleep(seconds)
-    suction_pump_off()
+    upper_suction_pump_off()
 
 
 def cleanup():
@@ -65,4 +65,10 @@ def cleanup():
         except Exception:
             pass
         _pwm_initialized = False
+
+
+# Backward-compatible aliases (older code may still import these names).
+suction_pump_on = upper_suction_pump_on
+suction_pump_off = upper_suction_pump_off
+suction_pump = upper_suction_pump
 
