@@ -4,12 +4,12 @@ Runs homing (down until limit switch via PCF8574) and then movements.
 
 Filteration flask: STEP=18, DIR=23 (BCM); EN tied on hardware (see filteration_flask.py).
 Filteration unit: STEP=13, DIR=19 (BCM); EN tied on hardware (see filteration_unit.py).
-Suction pump lift (stepper): STEP=21, DIR=12 (BCM); EN tied on hardware (see suction_pump_up_down.py). Flask DC pump: GPIO 11 RPWM (see suction_pump.py); leave GPIO 4 for DS18B20.
+Suction pump lift (stepper): STEP=21, DIR=12 (BCM); EN tied on hardware (see suction_pump_up_down.py). Flask/upper DC pump: GPIO 26 RPWM (see suction_pump.py); leave GPIO 4 for DS18B20.
 Petri dishes: STEP=10, DIR=22 (BCM); EN tied on hardware (see petri_dishes.py).
 Media dispensor: STEP=24, DIR=27 (BCM); physical pins 18 & 13 (see Media_dispensor.py).
 Suction pipe: STEP=8, DIR=20 (BCM); no limit switch — use up/down with steps only (see suction_pipe.py).
 Incubator lid: STEP=6, DIR=16 (BCM); physical pins 31 & 36; no limit (see incubator_lid.py).
-Filtration solenoid: GPIO 26 (BCM), pin 37 (see solinoid_value_to_filteration.py).
+Filtration solenoid: GPIO 14 (BCM), pin 8 (see solinoid_value_to_filteration.py).
 
 Shutdown: Ctrl+C runs full cleanup (see shutdown_all). SIGTERM (kill) also cleans up.
 """
@@ -18,6 +18,7 @@ import signal
 import sys
 import time
 
+import filteration_suction_pump
 from suction_pump_up_down import (
     suction_pump_up,
     suction_pump_down,
@@ -164,6 +165,11 @@ try:
     solinoid_value_to_filteration_on()
     time.sleep(2)
     solinoid_value_to_filteration_off() 
+
+    x = input ('Enter 0: ')
+    filteration_suction_pump_on(90)
+    time.sleep(2)
+    filteration_suction_pump_off()
 
     x = input ('Enter 1: ')
     Media_dispensor_home()

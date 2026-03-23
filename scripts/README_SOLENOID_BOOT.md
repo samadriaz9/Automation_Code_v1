@@ -2,7 +2,7 @@
 
 ## Why this happens
 
-- The repo now uses **GPIO 26** for the filtration solenoid (not UART). If you still use **GPIO 14** elsewhere, note: **GPIO 14** is **UART TX** and is often **HIGH** at boot with serial console on — bad for active-HIGH solenoid drivers.
+- The repo now uses **GPIO 14** for the filtration solenoid (UART TX pin). If you keep serial console enabled, this pin can sit **HIGH** at boot — bad for active-HIGH solenoid drivers.
 - If your relay/driver is **active HIGH** (GPIO HIGH = valve ON), a pin stuck HIGH at boot can **energize the solenoid** before Python runs.
 
 ## Fix A — Software (recommended first)
@@ -31,7 +31,7 @@ Edit the service file or add `Environment=SOLENOID_BOOT_PIN=17` under `[Service]
 
 ## Fix B — Hardware / wiring (best long-term)
 
-- Default code uses **GPIO 26** (not UART). If you change `SOLENOID_PIN`, update `solinoid_value_to_filteration.py` and the boot script.
+- Default code uses **GPIO 14**. If you change `SOLENOID_PIN`, update `solinoid_value_to_filteration.py` and the boot script.
 - Or add a **pull-down** on the control line so an undriven pin defaults to OFF (depends on your relay module logic).
 
 ## Fix C — Disable serial on GPIO 14/15 (optional)

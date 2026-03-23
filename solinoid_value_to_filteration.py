@@ -1,16 +1,16 @@
 """
 Solenoid valve for filtration line (BCM numbering).
 
-Uses GPIO 26 — avoids GPIO 14 (UART TX), which can sit HIGH at boot and energize the valve
-before Python runs. Physical header pin 37.
+Uses GPIO 14 — GPIO 14 is UART TX. Without the boot-safe script, this pin can sit HIGH at boot
+and energize the valve before Python runs. Physical header pin 8.
 
 See also: scripts/README_SOLENOID_BOOT.md if you need a boot-time LOW on this pin.
 """
 import RPi.GPIO as GPIO
 import time
 
-# BCM — general-purpose; not UART/SPI/I2C
-SOLENOID_PIN = 26
+# BCM
+SOLENOID_PIN = 14
 
 _initialized = False
 

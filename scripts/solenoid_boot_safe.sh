@@ -9,8 +9,8 @@
 #   sudo systemctl enable solenoid-gpio-boot.service
 #   sudo systemctl start solenoid-gpio-boot.service
 #
-# Must match SOLENOID_PIN in solinoid_value_to_filteration.py (default 26)
-PIN="${SOLENOID_BOOT_PIN:-26}"
+# Must match SOLENOID_PIN in solinoid_value_to_filteration.py (default 14)
+PIN="${SOLENOID_BOOT_PIN:-14}"
 
 if command -v raspi-gpio >/dev/null 2>&1; then
   # Output, drive low (valve OFF if your driver is active-HIGH)
