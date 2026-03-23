@@ -191,7 +191,7 @@ try:
     upper_suction_pump_off()
 
     x = input ('Enter 0: ')
-    solinoid_value_to_filteration_on()
+    solinoid_value_to_filteration()
 
     x = input ('Enter 0: ')
     filteration_suction_pump_on(90)

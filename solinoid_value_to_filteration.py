@@ -14,6 +14,7 @@ import time
 # BCM
 SOLENOID_PIN = 26
 WATER_LEVEL_PIN = 1  # BCM, pin 28
+WATER_LEVEL_ACTIVE_LOW = True  # 2-wire switch wired between GPIO and GND
 
 _initialized = False
 
@@ -27,7 +28,8 @@ def _ensure_gpio():
 
     GPIO.setmode(GPIO.BCM)
     GPIO.setup(SOLENOID_PIN, GPIO.OUT, initial=GPIO.LOW)
-    GPIO.setup(WATER_LEVEL_PIN, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+    # For 2-wire sensor wired to GND, keep input pulled HIGH when open.
+    GPIO.setup(WATER_LEVEL_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
     _initialized = True
 
 
@@ -48,7 +50,10 @@ def solinoid_value_to_filteration_off():
 def water_level_reached():
     """Return True when level sensor input is HIGH."""
     _ensure_gpio()
-    return GPIO.input(WATER_LEVEL_PIN) == GPIO.HIGH
+    state = GPIO.input(WATER_LEVEL_PIN)
+    if WATER_LEVEL_ACTIVE_LOW:
+        return state == GPIO.LOW
+    return state == GPIO.HIGH
 
 
 def solinoid_value_to_filteration(seconds=None, timeout_seconds=120, poll_seconds=0.05):
