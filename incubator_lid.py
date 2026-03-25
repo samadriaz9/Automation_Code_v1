@@ -39,7 +39,7 @@ def _step(steps, direction_high):
 def incubator_lid_up(steps):
     """Move incubator lid UP by the given number of steps."""
     print(f"Incubator lid: moving UP {steps} steps")
-    _step(steps, direction_high=True)  # DIR LOW = physical UP (same as suction_pipe)
+    _step(steps, direction_high=False)  # DIR LOW = physical UP (same as suction_pipe)
 
 
 def incubator_lid_down(steps):
