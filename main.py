@@ -176,7 +176,9 @@ atexit.register(shutdown_all)
 
 try:
     incubator_lid_up(200)
-    
+    time.sleep(2)
+    incubator_lid_down(200)
+    time.sleep(2)
     #Consumable_up(400)
     
     x = input ('Enter for media despensor home: ')
