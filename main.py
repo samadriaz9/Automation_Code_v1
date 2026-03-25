@@ -175,6 +175,125 @@ signal.signal(signal.SIGTERM, _on_sigterm)
 atexit.register(shutdown_all)
 
 try:
+    incubator_lid_up(200)
+    
+    #Consumable_up(400)
+    
+    x = input ('Enter for media despensor home: ')
+    Media_dispensor_home()
+    x= input ('Enter for media dispensor move up: ')
+    Media_dispensor_up(3500)
+    x = input ('Put in the syringe containging media: ')
+    Media_dispensor_down(800)
+    print("check the consumables container")
+    x = input ("Enter to keep consumables")
+    Consumable_down(400)
+    x = input ("Enter if comsumables place sucessfully")
+    suction_pump_home()
+    x = input ("Enter for setting up suction to media pad")
+    suction_pipe_down(930)
+    x = input ("Enter to bring petri dishes home")
+    petri_dishes_home()
+    petri_dishes_down(1025)
+    x = input ("Enter for picking up petr dish")
+    upper_suction_pump_on(100)
+    time.sleep(3)
+    suction_pipe_up(930)
+    suction_pump_up(3050)
+    upper_suction_pump_off()
+    
+    x = input ("Enter for picking up media pad")
+    suction_pump_home()
+    suction_pipe_down(1130)
+    upper_suction_pump_on(50)
+    time.sleep(2)
+    suction_pipe_up(1130)
+    suction_pump_up(3050)
+    upper_suction_pump_off()
+    
+    
+    x = input ("Enter for poruing media")
+    petri_dishes_home()
+    petri_dishes_down(300)
+    Media_dispensor_down(800)
+    time.sleep(2)
+    petri_dishes_down(725)
+    
+    
+    x = input ("Enter to put empty petri dish in trash")
+    suction_pump_home()
+    suction_pipe_down(1130)
+    upper_suction_pump_on(50)
+    time.sleep(2)
+    suction_pipe_up(1130)
+    suction_pump_up(3050)
+    upper_suction_pump_off()
+    
+    
+    x = input ("Enter to put empty petri dish in trash")
+    suction_pump_home()
+    suction_pipe_down(1330)
+    upper_suction_pump_on(100)
+    time.sleep(2)
+    suction_pipe_up(1330)
+    suction_pump_up(2120)
+    upper_suction_pump_off()
+    
+    
+    x = input ("Enter to put filter paper on filteration flask")
+    suction_pump_home()
+    filteration_unit_config()
+    filteration_flask_config()
+    Filteration_flask_up(1130)
+    suction_pipe_down(1430)
+    upper_suction_pump_on(30)
+    time.sleep(2)
+    suction_pipe_up(1430)
+    suction_pump_up(1230)
+    upper_suction_pump_off()
+    filteration_suction_pump_on(90)
+    time.sleep(2)
+    filteration_suction_pump_off()
+    
+    x = input ("Enter to send filter paper to assembly")
+    filteration_unit_config()
+    filteration_flask_config()
+    Filteration_flask_up(32)
+    Filteration_unit_up(850)
+    time.sleep(1)
+    solinoid_value_to_filteration()
+    filteration_suction_pump_on(90)
+    time.sleep(10)
+    filteration_suction_pump_off()
+    
+    x = input ("Enter to pick up filteration unit")
+    filteration_unit_config()
+    filteration_flask_config()
+    Filteration_flask_up(1130)
+    
+    
+    x = input ("Enter to pick up the membrance filter paper")
+    suction_pipe_down(800)
+    upper_suction_pump_on(100)
+    time.sleep(3)
+    suction_pipe_up(800)
+    suction_pump_up(1820)
+    upper_suction_pump_off()
+    
+    
+    x = input ("Enter to start incubation")
+    petri_dishes_home()
+    petri_dishes_down(3280)
+   
+   
+   
+    print("Lid up and down")
+    x = input ("Enter 0")
+    incubator_lid_down(200)
+    
+    x = input ("down")
+    incubator_lid_up(200)
+    
     print("camera on")
     x = input ('Enter 0: ')
     run_relay(P7, 3)
@@ -208,19 +327,11 @@ try:
     time.sleep(2)
     filteration_suction_pump_off()
 
-    x = input ('Enter 1: ')
-    Media_dispensor_home()
-    x= input ('Enter 2: ')
     
-    Media_dispensor_up(3500)
     
-    x = input ('Enter 3: ')
-    Media_dispensor_down(800)
     
-    x = input ('Enter 4: ')
-    Consumable_down(400)
-    x = input ('Enter 5: ')
-    Consumable_up(400)
+    
+    
     
     x = input ('Enter 5: ')
     petri_dishes_home()
