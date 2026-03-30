@@ -67,13 +67,13 @@ def _step(steps, direction_high):
 def suction_pipe_up(steps):
     """Move suction pipe UP by the given number of steps."""
     print(f"Suction Pipe: moving UP {steps} steps")
-    _step(steps, direction_high=False)  # DIR LOW = physical UP
+    _step(steps, direction_high=True)  # DIR HIGH = physical UP
 
 
 def suction_pipe_down(steps):
     """Move suction pipe DOWN by the given number of steps."""
     print(f"Suction Pipe: moving DOWN {steps} steps")
-    _step(steps, direction_high=True)  # DIR HIGH = physical DOWN
+    _step(steps, direction_high=False)  # DIR LOW = physical DOWN
 
 
 def suction_pipe_home():
@@ -84,7 +84,7 @@ def suction_pipe_home():
     """
     print("Suction Pipe: homing DOWN until P0 limit switch (PCF8574) is pressed")
     _ensure_gpio()
-    GPIO.output(DIR_PIN, GPIO.HIGH)  # DIR HIGH = physical DOWN (see suction_pipe_down)
+    GPIO.output(DIR_PIN, GPIO.LOW)  # DIR LOW = physical DOWN (see suction_pipe_down)
 
     while True:
         p0 = _read_p0()
