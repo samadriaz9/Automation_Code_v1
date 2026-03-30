@@ -91,7 +91,7 @@ def Media_dispensor_home():
     while True:
         p5 = _read_p5()
 
-        if p5 == 0:
+        if p5 == 1:
             print("P5 limit switch detected, stopping.")
             break
 
