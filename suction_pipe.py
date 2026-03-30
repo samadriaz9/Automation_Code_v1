@@ -22,6 +22,10 @@ _initialized = False
 _i2c_initialized = False
 _bus = None
 PCF8574_ADDRESS = 0x21  # second extender (adjust if your address differs)
+# Change this if your switch is wired the opposite way.
+# - If your PCF8574 reads 0 when pressed (pull-up + switch-to-GND), keep True.
+# - If your PCF8574 reads 1 when pressed, set False.
+LIMIT_ACTIVE_LOW = False
 
 
 def _ensure_gpio():
@@ -76,9 +80,7 @@ def suction_pipe_home():
     """
     Home by moving DOWN until the limit switch on PCF8574 P0 is pressed.
 
-    Assumes typical PCF8574 pull-up behavior:
-    - P0 reads 1 when not pressed
-    - P0 reads 0 when pressed
+    Stop condition depends on LIMIT_ACTIVE_LOW.
     """
     print("Suction Pipe: homing DOWN until P0 limit switch (PCF8574) is pressed")
     _ensure_gpio()
@@ -86,7 +88,8 @@ def suction_pipe_home():
 
     while True:
         p0 = _read_p0()
-        if p0 == 0:
+        pressed_value = 0 if LIMIT_ACTIVE_LOW else 1
+        if p0 == pressed_value:
             print("P0 limit switch detected, stopping suction pipe.")
             break
 
