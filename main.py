@@ -170,7 +170,7 @@ def _on_sigterm(signum, frame):
     sys.exit(0)
 
 
-# kill / systemd stop without -9
+# kill / systemd stop without -9 This is the kill signal handler
 signal.signal(signal.SIGTERM, _on_sigterm)
 atexit.register(shutdown_all)
 
