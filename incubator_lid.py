@@ -21,14 +21,16 @@ def _ensure_gpio():
     global _initialized
     if not _initialized:
         GPIO.setmode(GPIO.BCM)
-        GPIO.setup(STEP_PIN, GPIO.OUT)
-        GPIO.setup(DIR_PIN, GPIO.OUT)
+        GPIO.setup(STEP_PIN, GPIO.OUT, initial=GPIO.LOW)
+        GPIO.setup(DIR_PIN, GPIO.OUT, initial=GPIO.LOW)
         _initialized = True
 
 
 def _step(steps, direction_high):
     _ensure_gpio()
     GPIO.output(DIR_PIN, GPIO.HIGH if direction_high else GPIO.LOW)
+    # Some stepper drivers need a short DIR setup time before the first step edge.
+    time.sleep(delay)
     for _ in range(steps):
         GPIO.output(STEP_PIN, GPIO.HIGH)
         time.sleep(delay)
