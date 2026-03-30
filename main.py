@@ -175,6 +175,9 @@ signal.signal(signal.SIGTERM, _on_sigterm)
 atexit.register(shutdown_all)
 
 try:
+    suction_pipe_home()
+    
+    x = input ("Enter")
     incubator_lid_up(200)
     time.sleep(2)
     incubator_lid_down(200)
