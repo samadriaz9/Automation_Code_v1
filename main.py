@@ -176,19 +176,12 @@ atexit.register(shutdown_all)
 
 try:
     
-    x = input ("6. Picking up filter paper from filteration flask")
-    suction_pipe_home()
-    suction_pump_home()
-    suction_pump_up(1245)
-    suction_pipe_up(670)
-    upper_suction_pump_on(30)
-    time.sleep(3)
-    suction_pipe_down(670)
-    suction_pump_up(1805)
-    suction_pipe_up(710)
-    upper_suction_pump_off()
-    time.sleep(3)
-    suction_pipe_home()
+    print("Lid up and down")
+    x = input ("Enter 0")
+    incubator_lid_down(200)
+    
+    x = input ("down")
+    incubator_lid_up(200)
     
     
     
@@ -292,6 +285,41 @@ try:
     filteration_unit_config()
     filteration_flask_config()
     Filteration_flask_up(1130)
+    
+    
+    x = input ("6. Picking up filter paper from filteration flask")
+    suction_pipe_home()
+    suction_pump_home()
+    suction_pump_up(1245)
+    suction_pipe_up(670)
+    upper_suction_pump_on(30)
+    time.sleep(3)
+    suction_pipe_down(670)
+    suction_pump_up(1805)
+    suction_pipe_up(710)
+    upper_suction_pump_off()
+    time.sleep(3)
+    suction_pipe_home()
+    
+    x = input ("7. Enter to start incubation")
+    petri_dishes_home()
+    petri_dishes_down(3280)
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
     
     x = input ("Enter to pick up the membrance filter paper")
