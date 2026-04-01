@@ -179,6 +179,16 @@ try:
     x  = input ("Enter to start pictures")
     Camera_home()
     Camera_down(2500)
+    incubator_lid_home()
+    petri_dishes_up(300)
+    run_relay(P7, 3)
+    time.sleep(3)
+    petri_dishes_home()
+    petri_dishes_down(3280)
+    incubator_lid_up(200)
+    run_relay(P7, 3)
+    time.sleep(3)
+    
 
     print("camera on")
     x = input ('Enter 0: ')
@@ -312,7 +322,7 @@ try:
     
     x = input ("Enter to start incubation")
     run_relay(P1, 1)
-    Start_incubation(37, 480)
+    Start_incubation(37, 1)
 
     x  = input ("Enter to start pictures")
 
