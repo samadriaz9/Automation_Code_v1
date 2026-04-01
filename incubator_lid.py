@@ -22,7 +22,7 @@ _bus = None
 
 PCF8574_ADDRESS = 0x21
 LIMIT_P = 1  # P1
-LIMIT_ACTIVE_LOW = True  # change to False if your switch reads 1 when pressed
+LIMIT_ACTIVE_LOW = False  # set False because your switch reads 1 when pressed
 
 
 def _ensure_gpio():
