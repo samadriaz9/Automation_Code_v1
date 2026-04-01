@@ -31,19 +31,35 @@ class USBCameraWorker:
             return
 
         self._cap = cap
+        window_name = f"USB Camera (/dev/video{self.device_index})"
         print(f"[USB Camera] Started (/dev/video{self.device_index})")
         try:
             while not self._stop_event.is_set():
-                ok, _ = cap.read()
+                ok, frame = cap.read()
                 if not ok:
                     time.sleep(0.05)
                     continue
-                time.sleep(0.02)
+
+                # Pop-up live preview while the worker is running.
+                cv2.imshow(window_name, frame)
+
+                # keep UI responsive; allow 'q' to stop preview
+                key = cv2.waitKey(1) & 0xFF
+                if key == ord("q"):
+                    self._stop_event.set()
+                    break
         finally:
             try:
                 cap.release()
             except Exception:
                 pass
+            try:
+                cv2.destroyWindow(window_name)
+            except Exception:
+                try:
+                    cv2.destroyAllWindows()
+                except Exception:
+                    pass
             self._cap = None
             print("[USB Camera] Stopped")
 
