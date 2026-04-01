@@ -62,6 +62,7 @@ from relay_control import (
     run_relay_sequence,
     cleanup as relay_cleanup,
 )
+from incubation_module import Start_incubation
 
 from filteration_suction_pump import (
     filteration_suction_pump_on,
@@ -175,7 +176,8 @@ signal.signal(signal.SIGTERM, _on_sigterm)
 atexit.register(shutdown_all)
 
 try:
-    
+    Start_incubation(37, 5)
+
     print("camera on")
     x = input ('Enter 0: ')
     run_relay(P7, 3)
