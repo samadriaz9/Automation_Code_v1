@@ -73,12 +73,14 @@ def _step(steps, direction_high, stop_on_limit=False):
 def incubator_lid_up(steps):
     """Move incubator lid UP by the given number of steps."""
     print(f"Incubator lid: moving UP {steps} steps (DIR=GPIO14 HIGH)")
-    _step(steps, direction_high=True, stop_on_limit=True)
+    # Allow UP even when limit is pressed, so lid can move away from switch.
+    _step(steps, direction_high=True, stop_on_limit=False)
 
 
 def incubator_lid_down(steps):
     """Move incubator lid DOWN by the given number of steps."""
     print(f"Incubator lid: moving DOWN {steps} steps (DIR=GPIO14 LOW)")
+    # Block DOWN when limit is pressed to avoid pushing into the switch.
     _step(steps, direction_high=False, stop_on_limit=True)
 
 
