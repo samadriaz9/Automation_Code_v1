@@ -176,8 +176,9 @@ signal.signal(signal.SIGTERM, _on_sigterm)
 atexit.register(shutdown_all)
 
 try:
-    run_relay(P1, 1)
-    Start_incubation(37, 5)
+    x  = input ("Enter to start pictures")
+    Camera_home()
+    Camera_down(2500)
 
     print("camera on")
     x = input ('Enter 0: ')
@@ -303,14 +304,20 @@ try:
     time.sleep(3)
     suction_pipe_home()
     
-    x = input ("7. Enter to start incubation")
+    x = input ("7. Enter to shift it for incubation")
     incubator_lid_home()
     petri_dishes_home()
     petri_dishes_down(3280)
     incubator_lid_up(200)
     
-    
-    
+    x = input ("Enter to start incubation")
+    run_relay(P1, 1)
+    Start_incubation(37, 480)
+
+    x  = input ("Enter to start pictures")
+
+    Camera_home()
+    Camera_down(2500)
     
     
     
