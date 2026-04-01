@@ -176,6 +176,7 @@ signal.signal(signal.SIGTERM, _on_sigterm)
 atexit.register(shutdown_all)
 
 try:
+    run_relay(P1, 1)
     Start_incubation(37, 5)
 
     print("camera on")
