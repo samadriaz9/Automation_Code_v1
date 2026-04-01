@@ -176,6 +176,8 @@ atexit.register(shutdown_all)
 
 try:
     
+    x = input ("Enter 0")
+    incubator_lid_home()
     print("Lid up and down")
     x = input ("Enter 0")
     incubator_lid_down(200)
