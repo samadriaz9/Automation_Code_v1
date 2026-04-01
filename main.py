@@ -175,11 +175,14 @@ signal.signal(signal.SIGTERM, _on_sigterm)
 atexit.register(shutdown_all)
 
 try:
-    x = input ("7. Enter to start incubation")
-    incubator_lid_home()
-    petri_dishes_home()
-    petri_dishes_down(3280)
-    incubator_lid_up(200)
+    
+    print("camera on")
+    x = input ('Enter 0: ')
+    run_relay(P7, 3)
+    time.sleep(3)
+    run_relay(P7, 3)
+    print("camera off")
+    run_relay(P1, 10)
 
 
     x = input ('Enter for media despensor home: ')
