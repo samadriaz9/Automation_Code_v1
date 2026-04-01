@@ -175,14 +175,12 @@ signal.signal(signal.SIGTERM, _on_sigterm)
 atexit.register(shutdown_all)
 
 try:
-    
-    x = input ("Enter 0")
+    x = input ("7. Enter to start incubation")
     incubator_lid_home()
-    x = input ("down")
+    petri_dishes_home()
+    petri_dishes_down(3280)
     incubator_lid_up(200)
-    
-    
-    
+
 
     x = input ('Enter for media despensor home: ')
     Media_dispensor_home()
@@ -300,9 +298,10 @@ try:
     suction_pipe_home()
     
     x = input ("7. Enter to start incubation")
+    incubator_lid_home()
     petri_dishes_home()
     petri_dishes_down(3280)
-    
+    incubator_lid_up(200)
     
     
     
