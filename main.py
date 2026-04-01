@@ -103,6 +103,7 @@ from incubator_lid import (
     incubator_lid_down,
     cleanup as incubator_lid_cleanup,
 )
+from usb_camera_thread import start_usb_camera_thread, stop_usb_camera_thread
 
 from solinoid_value_to_filteration import (
     solinoid_value_to_filteration,
@@ -126,6 +127,7 @@ import RPi.GPIO as GPIO
 
 # --- Run once: stops PWM/relays/solenoid and releases GPIO (helps avoid drivers heating when idle) ---
 _shutdown_done = False
+_usb_camera_worker = None
 
 
 def shutdown_all():
@@ -183,11 +185,15 @@ try:
     petri_dishes_up(300)
     run_relay(P7, 3)
     time.sleep(3)
+    _usb_camera_worker = start_usb_camera_thread(device_index=0)
+    x = input ("Camera Configuration Required")
     petri_dishes_home()
     petri_dishes_down(3280)
     incubator_lid_up(200)
     run_relay(P7, 3)
     time.sleep(3)
+    stop_usb_camera_thread(_usb_camera_worker)
+    _usb_camera_worker = None
     
 
     print("camera on")
@@ -497,4 +503,5 @@ except KeyboardInterrupt:
     print("\nInterrupted (Ctrl+C).")
 
 finally:
+    stop_usb_camera_thread(_usb_camera_worker)
     shutdown_all()
