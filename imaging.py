@@ -18,6 +18,7 @@ import sys
 import time
 
 import cv2
+import numpy as np
 
 from camera_module import Camera_up, Camera_down
 from petri_dishes import petri_dishes_up
@@ -83,16 +84,58 @@ def _crop_center_square(frame):
     return frame[y0 : y0 + side, x0 : x0 + side]
 
 
+def _build_mosaic_from_tiles(output_dir, rows, cols, mosaic_name="mosaic.jpg"):
+    """Stitch numbered tiles (1.jpg..rows*cols.jpg) into one big image."""
+    rows = int(rows)
+    cols = int(cols)
+    total = rows * cols
+    if total <= 0:
+        raise ValueError("rows*cols must be > 0")
+
+    first_path = os.path.join(output_dir, "1.jpg")
+    first = cv2.imread(first_path)
+    if first is None:
+        raise RuntimeError(f"Could not read first tile: {first_path}")
+
+    tile_h, tile_w = first.shape[:2]
+    tile_shape_tail = first.shape[2:] if len(first.shape) > 2 else ()
+
+    mosaic = np.zeros((rows * tile_h, cols * tile_w) + tile_shape_tail, dtype=first.dtype)
+
+    for r in range(rows):
+        for c in range(cols):
+            image_idx = r * cols + c + 1
+            tile_path = os.path.join(output_dir, f"{image_idx}.jpg")
+            tile = cv2.imread(tile_path)
+            if tile is None:
+                raise RuntimeError(f"Could not read tile: {tile_path}")
+
+            if tile.shape[0] != tile_h or tile.shape[1] != tile_w:
+                tile = cv2.resize(tile, (tile_w, tile_h), interpolation=cv2.INTER_AREA)
+
+            y0 = r * tile_h
+            x0 = c * tile_w
+            mosaic[y0 : y0 + tile_h, x0 : x0 + tile_w] = tile
+
+    mosaic_path = os.path.join(output_dir, mosaic_name)
+    ok = cv2.imwrite(mosaic_path, mosaic)
+    if not ok:
+        raise RuntimeError(f"Could not write mosaic: {mosaic_path}")
+    return mosaic_path
+
+
 def start_imaging_capture_pattern(
     output_root=".",
     camera_device_index=0,
-    rows=4,
-    cols=4,
+    rows=5,
+    cols=5,
     camera_step_per_col=100,
     petri_step_per_row=100,
     camera_reset_each_row=True,
     square_crop=True,
     square_grid=True,
+    save_mosaic=True,
+    mosaic_name="mosaic.jpg",
     settle_seconds=0.15,
 ):
     """
@@ -163,6 +206,14 @@ def start_imaging_capture_pattern(
                     time.sleep(settle_seconds)
 
         print(f"[Imaging] Capture complete: {output_dir}")
+        if bool(save_mosaic):
+            mosaic_path = _build_mosaic_from_tiles(
+                output_dir=output_dir,
+                rows=int(rows),
+                cols=int(cols),
+                mosaic_name=mosaic_name,
+            )
+            print(f"[Imaging] Mosaic saved: {mosaic_path}")
         return output_dir
     finally:
         cap.release()
