@@ -200,7 +200,12 @@ try:
     petri_dishes_home()
     petri_dishes_down(3290)
     petri_dishes_up(330)
-    run_relay(P7, 3)
+    ok, frame = cap.read()
+    if ok:
+        print("Camera is on")
+    else:
+        run_relay(P7, 3)
+        print("Camera switch on")
     time.sleep(3)
     print("Wanna do configuration for camera? (y/n)")
     yn = input()
