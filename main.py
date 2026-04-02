@@ -63,6 +63,7 @@ from relay_control import (
     cleanup as relay_cleanup,
 )
 from incubation_module import Start_incubation
+from imaging import start_imaging_capture_pattern
 
 from filteration_suction_pump import (
     filteration_suction_pump_on,
