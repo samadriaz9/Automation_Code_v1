@@ -18,6 +18,7 @@ from pdb import run
 import signal
 import sys
 import time
+import cv2
 
 import filteration_suction_pump
 from suction_pump_up_down import (
@@ -180,11 +181,24 @@ atexit.register(shutdown_all)
 
 try:
     x  = input ("Enter to start pictures")
+    
+    try:
+        cap = cv2.VideoCapture(0)
+        ok, frame = cap.read()
+        if ok:
+            run_relay(P7, 3)
+            time.sleep(3)
+            run_relay(P7, 3)
+            print("camera off")
+    except Exception as e:
+        print(f"Camera not found")
+        sys.exit(1)
+
     Camera_home()
     Camera_down(2430)
+    incubator_lid_home()
     petri_dishes_home()
     petri_dishes_down(3290)
-    incubator_lid_home()
     petri_dishes_up(330)
     run_relay(P7, 3)
     time.sleep(3)
