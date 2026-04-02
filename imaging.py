@@ -112,7 +112,6 @@ def _build_mosaic_from_tiles(
     mosaic_cols,
     mosaic_window_row0=0,
     mosaic_window_col0=0,
-    mosaic_name="mosaic.jpg",
     flip_x=False,
     flip_y=False,
     axis_swap=False,
@@ -193,6 +192,26 @@ def _build_mosaic_from_tiles(
             x0 = dest_c * tile_w
             mosaic[y0 : y0 + tile_h, x0 : x0 + tile_w] = tile
 
+    return mosaic
+
+
+def _trim_mosaic(mosaic, crop_top_px=0, crop_right_px=0):
+    """Remove ``crop_top_px`` from the top and ``crop_right_px`` from the right."""
+    ct = int(crop_top_px)
+    cr = int(crop_right_px)
+    if ct < 0 or cr < 0:
+        raise ValueError("crop amounts must be >= 0")
+    if ct == 0 and cr == 0:
+        return mosaic
+    h, w = mosaic.shape[:2]
+    if h <= ct or w <= cr:
+        raise ValueError(
+            f"Mosaic size {w}x{h} too small to trim top={ct} and right={cr}"
+        )
+    return mosaic[ct:h, 0 : w - cr]
+
+
+def _write_mosaic(output_dir, mosaic, mosaic_name):
     mosaic_path = os.path.join(output_dir, mosaic_name)
     ok = cv2.imwrite(mosaic_path, mosaic)
     if not ok:
@@ -205,10 +224,6 @@ def start_imaging_capture_pattern(
     camera_device_index=0,
     rows=7,
     cols=7,
-    mosaic_rows=6,
-    mosaic_cols=6,
-    mosaic_window_row0=0,
-    mosaic_window_col0=0,
     camera_step_per_col=85,
     petri_step_per_row=85,
     camera_reset_each_row=True,
@@ -216,7 +231,9 @@ def start_imaging_capture_pattern(
     square_grid=True,
     save_mosaic=True,
     mosaic_name="mosaic.jpg",
-    mosaic_center_fraction=1.0 / 3.0,
+    mosaic_center_fraction=1.0,
+    mosaic_crop_top_px=600,
+    mosaic_crop_right_px=600,
     settle_seconds=0.15,
 ):
     """
@@ -231,11 +248,11 @@ def start_imaging_capture_pattern(
     - Shift to the next row by moving petri dishes towards "up".
     - Optionally reset camera back to column 0 after each row (needed to keep a square coverage area).
 
-    Capture grid is ``rows``×``cols`` (default 7×7). ``mosaic.jpg`` is built as ``mosaic_rows``×``mosaic_cols``
-    (default 6×6) by taking a window of source tiles starting at
-    ``(mosaic_window_row0, mosaic_window_col0)`` in the capture grid—so the extra 7th row/column
-    can be dropped without rescanning. Each mosaic cell uses ``mosaic_center_fraction`` of the
-    center of that tile (default 1/3). Set offsets to (1,0), (0,1), or (1,1) to trim different sides.
+    Capture grid is ``rows``×``cols`` (default 7×7). ``mosaic.jpg`` is a full ``rows``×``cols`` stitch
+    (axis swap + flip Y for this rig). After assembly, ``mosaic_crop_top_px`` pixels are removed
+    from the top and ``mosaic_crop_right_px`` from the right (default 600 each). Set both to 0 for
+    no trim. ``mosaic_center_fraction`` uses only the center fraction of each tile before placing
+    (default 1.0 = full tile).
 
     Returns:
         output_dir path containing captured images.
@@ -294,21 +311,26 @@ def start_imaging_capture_pattern(
 
         print(f"[Imaging] Capture complete: {output_dir}")
         if bool(save_mosaic):
-            # Matches physical layout: axis swap + flip Y (was swap_flipY_mosaic.jpg).
-            path = _build_mosaic_from_tiles(
+            # Full capture grid mosaic; layout: axis swap + flip Y (swap_flipY for this rig).
+            mosaic = _build_mosaic_from_tiles(
                 output_dir=output_dir,
                 capture_rows=int(rows),
                 capture_cols=int(cols),
-                mosaic_rows=int(mosaic_rows),
-                mosaic_cols=int(mosaic_cols),
-                mosaic_window_row0=int(mosaic_window_row0),
-                mosaic_window_col0=int(mosaic_window_col0),
-                mosaic_name=mosaic_name,
+                mosaic_rows=int(rows),
+                mosaic_cols=int(cols),
+                mosaic_window_row0=0,
+                mosaic_window_col0=0,
                 flip_x=False,
                 flip_y=True,
                 axis_swap=True,
                 mosaic_center_fraction=float(mosaic_center_fraction),
             )
+            mosaic = _trim_mosaic(
+                mosaic,
+                crop_top_px=int(mosaic_crop_top_px),
+                crop_right_px=int(mosaic_crop_right_px),
+            )
+            path = _write_mosaic(output_dir, mosaic, mosaic_name)
             print(f"[Imaging] Mosaic saved: {path}")
         return output_dir
     finally:
