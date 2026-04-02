@@ -209,9 +209,10 @@ try:
         print("press y again when camera is configured")
         yn = input()
         if yn == "y":
-            _usb_camera_worker = None
+            # Stop the preview thread so imaging can open the camera device.
             stop_usb_camera_thread(_usb_camera_worker)
-            time.sleep(2)
+            _usb_camera_worker = None
+            time.sleep(0.5)
     
     print("Starting imaging capture pattern")
     start_imaging_capture_pattern()

@@ -1,4 +1,6 @@
 import sys
+import io
+import contextlib
 import threading
 import time
 
@@ -34,21 +36,38 @@ class USBCameraWorker:
             print(f"[USB Camera] Could not open /dev/video{self.device_index}")
             return
 
+        # Reduce capture lag / stale frames (best-effort; not all backends honor this).
+        try:
+            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        except Exception:
+            pass
+
         self._cap = cap
         window_name = f"USB Camera (/dev/video{self.device_index})"
         print(f"[USB Camera] Started (/dev/video{self.device_index})")
         try:
             while not self._stop_event.is_set():
-                ok, frame = cap.read()
+                # OpenCV decoder can be noisy on unstable streams ("Corrupt JPEG data...").
+                # Suppress that stderr spam to avoid flooding the terminal.
+                if sys.platform.startswith("linux"):
+                    with contextlib.redirect_stderr(io.StringIO()):
+                        ok, frame = cap.read()
+                else:
+                    ok, frame = cap.read()
                 if not ok:
                     time.sleep(0.05)
                     continue
 
                 # Pop-up live preview while the worker is running.
-                cv2.imshow(window_name, frame)
+                if sys.platform.startswith("linux"):
+                    with contextlib.redirect_stderr(io.StringIO()):
+                        cv2.imshow(window_name, frame)
+                        key = cv2.waitKey(1) & 0xFF
+                else:
+                    cv2.imshow(window_name, frame)
+                    key = cv2.waitKey(1) & 0xFF
 
                 # keep UI responsive; allow 'q' to stop preview
-                key = cv2.waitKey(1) & 0xFF
                 if key == ord("q"):
                     self._stop_event.set()
                     break

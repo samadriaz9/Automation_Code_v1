@@ -12,6 +12,8 @@ to run the capture pattern and save images.
 """
 
 import os
+import io
+import contextlib
 import sys
 import time
 
@@ -42,10 +44,12 @@ def _next_exp_dir(output_root="."):
 def _capture_frame(cap, out_path, flush_frames=4):
     """Grab a fresh frame and save JPG."""
     for _ in range(max(0, int(flush_frames))):
-        cap.grab()
+        with contextlib.redirect_stderr(io.StringIO()):
+            cap.grab()
         time.sleep(0.01)
 
-    ok, frame = cap.read()
+    with contextlib.redirect_stderr(io.StringIO()):
+        ok, frame = cap.read()
     if not ok:
         raise RuntimeError("USB camera frame read failed")
     cv2.imwrite(out_path, frame)
