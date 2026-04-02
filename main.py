@@ -182,6 +182,8 @@ try:
     x  = input ("Enter to start pictures")
     Camera_home()
     Camera_down(2430)
+    petri_dishes_home()
+    petri_dishes_down(3290)
     incubator_lid_home()
     petri_dishes_up(330)
     run_relay(P7, 3)
