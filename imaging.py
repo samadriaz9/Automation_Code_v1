@@ -241,39 +241,17 @@ def start_imaging_capture_pattern(
 
         print(f"[Imaging] Capture complete: {output_dir}")
         if bool(save_mosaic):
-            # Generate multiple orientations so you can pick the correct one quickly.
-            # (The physical "up" direction vs image "top" direction can be opposite.)
-            variants = []
-            # row-major layout variants
-            variants.extend(
-                [
-                    ("row_normal", False, False, mosaic_name),
-                    ("row_flipX", True, False, f"flipX_{mosaic_name}"),
-                    ("row_flipY", False, True, f"flipY_{mosaic_name}"),
-                    ("row_flipXY", True, True, f"flipXY_{mosaic_name}"),
-                ]
+            # Matches physical layout: axis swap + flip Y (was swap_flipY_mosaic.jpg).
+            path = _build_mosaic_from_tiles(
+                output_dir=output_dir,
+                rows=int(rows),
+                cols=int(cols),
+                mosaic_name=mosaic_name,
+                flip_x=False,
+                flip_y=True,
+                axis_swap=True,
             )
-            # axis-swapped layout variants (if camera columns map to mosaic rows)
-            variants.extend(
-                [
-                    ("swap_normal", False, False, f"swap_{mosaic_name}"),
-                    ("swap_flipX", True, False, f"swap_flipX_{mosaic_name}"),
-                    ("swap_flipY", False, True, f"swap_flipY_{mosaic_name}"),
-                    ("swap_flipXY", True, True, f"swap_flipXY_{mosaic_name}"),
-                ]
-            )
-
-            for _, flip_x, flip_y, name in variants:
-                path = _build_mosaic_from_tiles(
-                    output_dir=output_dir,
-                    rows=int(rows),
-                    cols=int(cols),
-                    mosaic_name=name,
-                    flip_x=flip_x,
-                    flip_y=flip_y,
-                    axis_swap=bool(name.startswith("swap_")),
-                )
-                print(f"[Imaging] Mosaic saved: {path}")
+            print(f"[Imaging] Mosaic saved: {path}")
         return output_dir
     finally:
         cap.release()
