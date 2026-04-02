@@ -180,68 +180,6 @@ signal.signal(signal.SIGTERM, _on_sigterm)
 atexit.register(shutdown_all)
 
 try:
-    x  = input ("Enter to start pictures")
-    
-    try:
-        cap = cv2.VideoCapture(0)
-        ok, frame = cap.read()
-        if ok:
-            run_relay(P7, 3)
-            time.sleep(3)
-            print("camera off")
-    except Exception as e:
-        print(f"Camera not found")
-        sys.exit(1)
-
-    Camera_home()
-    Camera_down(2430)
-    incubator_lid_home()
-    petri_dishes_home()
-    petri_dishes_down(3290)
-    petri_dishes_up(330)
-    ok, frame = cap.read()
-    if ok:
-        print("Camera is on")
-    else:
-        run_relay(P7, 3)
-        print("Camera switch on")
-    time.sleep(3)
-    print("Wanna do configuration for camera? (y/n)")
-    yn = input()
-    if yn == "y":
-        _usb_camera_worker = start_usb_camera_thread(device_index=0)
-        print("press y again when camera is configured")
-        yn = input()
-        if yn == "y":
-            # Stop the preview thread so imaging can open the camera device.
-            stop_usb_camera_thread(_usb_camera_worker)
-            _usb_camera_worker = None
-            time.sleep(0.5)
-    
-    print("Starting imaging capture pattern")
-    start_imaging_capture_pattern()
-    time.sleep(0.5)
-    print("Imaging capture pattern completed")
-    
-    print("Moving petri dishes home")
-    petri_dishes_home()
-    print("Moving petri dishes down")
-    petri_dishes_down(3290)
-    print("Moving incubator lid up")
-    incubator_lid_up(200)
-    run_relay(P7, 3)
-    time.sleep(3)
-    
-
-    print("camera on")
-    x = input ('Enter 0: ')
-    run_relay(P7, 3)
-    time.sleep(3)
-    run_relay(P7, 3)
-    print("camera off")
-    run_relay(P1, 10)
-
-
     x = input ('Enter for media despensor home: ')
     Media_dispensor_home()
     x= input ('Enter for media dispensor move up: ')
@@ -250,44 +188,10 @@ try:
     Media_dispensor_down(800)
     
     
-    #print("check the consumables container")
-    #x = input ("Enter to keep consumables")
-    #Consumable_down(400)
-    #x = input ("Enter if comsumables place sucessfully")
-    #suction_pipe_home()
-    #suction_pipe_up(300)
-    #suction_pump_home()
-    #x = input ("Enter for setting up suction to shift petri dish")
-    #suction_pipe_up(530)
     x = input ("Enter to bring petri dishes home")
+    incubator_lid_home()
     petri_dishes_home()
     petri_dishes_down(1035)
-    #x = input ("Enter for picking up petr dish")
-    #upper_suction_pump_on(100)
-    #time.sleep(3)
-    #suction_pipe_down(530)
-    #suction_pump_up(3050)
-    #suction_pipe_up(300)
-    #upper_suction_pump_off()
-    
-    
-    
-    
-    
-    
-    
-    
-    #x = input ("Enter to put empty petri dish in trash")
-    #suction_pump_home()
-    #suction_pipe_home()
-    #suction_pipe_up(1130)
-    #upper_suction_pump_on(100)
-    #time.sleep(3)
-    #suction_pipe_down(1130)
-    #suction_pump_up(2120)
-    #upper_suction_pump_off()
-    
-
     
     x = input ("1. Enter to put filter paper on filteration flask")
     suction_pipe_home()
@@ -363,178 +267,73 @@ try:
     petri_dishes_down(3280)
     incubator_lid_up(200)
     
-    x = input ("Enter to start incubation")
+    x = input ("8. Enter to start incubation")
     run_relay(P1, 1)
     Start_incubation(37, 1)
 
-    x  = input ("Enter to start pictures")
+    x  = input ("9. Enter to start pictures")
+    
+    try:
+        cap = cv2.VideoCapture(0)
+        ok, frame = cap.read()
+        if ok:
+            run_relay(P7, 3)
+            time.sleep(3)
+            print("camera off")
+    except Exception as e:
+        print(f"Camera not found")
+        sys.exit(1)
 
     Camera_home()
-    Camera_down(2500)
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    x = input ("Enter to pick up the membrance filter paper")
-    suction_pipe_down(800)
-    upper_suction_pump_on(100)
-    time.sleep(3)
-    suction_pipe_up(800)
-    suction_pump_up(1820)
-    upper_suction_pump_off()
-    
-    
-    x = input ("Enter to start incubation")
+    Camera_down(2430)
+    incubator_lid_home()
     petri_dishes_home()
-    petri_dishes_down(3280)
-   
-   
-   
-    print("Lid up and down")
-    x = input ("Enter 0")
-    incubator_lid_down(200)
+    petri_dishes_down(3290)
+    petri_dishes_up(330)
+    ok, frame = cap.read()
+    if ok:
+        print("Camera is on")
+    else:
+        run_relay(P7, 3)
+        print("Camera switch on")
+    time.sleep(3)
+    print("Wanna do configuration for camera? (y/n)")
+    yn = input()
+    if yn == "y":
+        _usb_camera_worker = start_usb_camera_thread(device_index=0)
+        print("press y again when camera is configured")
+        yn = input()
+        if yn == "y":
+            # Stop the preview thread so imaging can open the camera device.
+            stop_usb_camera_thread(_usb_camera_worker)
+            _usb_camera_worker = None
+            time.sleep(0.5)
+    for i in range(10):
+        ok, frame = cap.read()
+        if ok:
+            break
+        else:
+            run_relay(P7, 3)
+            time.sleep(3)
+    if ok:
+        print("Camera is on")
+    else:
+        print("Camera is off")
+        sys.exit(1)
+
+    print("Starting imaging capture pattern")
+    start_imaging_capture_pattern()
+    time.sleep(0.5)
+    print("Imaging capture pattern completed")
     
-    x = input ("down")
+    print("Moving petri dishes home")
+    petri_dishes_home()
+    print("Moving petri dishes down")
+    petri_dishes_down(3290)
+    print("Moving incubator lid up")
     incubator_lid_up(200)
-    
-    print("camera on")
-    x = input ('Enter 0: ')
     run_relay(P7, 3)
     time.sleep(3)
-    run_relay(P7, 3)
-    print("camera off")
-    run_relay(P1, 10)
-
-
-    x = input ('Enter 0: ')
-    solinoid_waste_on()
-    time.sleep(2)
-    solinoid_waste_off()
-
-    x = input ('Enter 0: ')
-    solinoid_value_drain_on()
-    time.sleep(2)
-    solinoid_value_drain_off()
-
-    x= input ('Enter 0: ')
-
-    upper_suction_pump_on(100)
-    time.sleep(2)
-    upper_suction_pump_off()
-
-    x = input ('Enter 0: ')
-    solinoid_value_to_filteration()
-
-    x = input ('Enter 0: ')
-    filteration_suction_pump_on(90)
-    time.sleep(2)
-    filteration_suction_pump_off()
-
-    
-    
-    
-    
-    
-    
-    x = input ('Enter 5: ')
-    petri_dishes_home()
-    petri_dishes_down(1870)
-    
-    Camera_home()
-    Camera_down(2500)
-    
-    
-    x= input ('Enter 6: ')
-    #media pad + petri dish
-    suction_pump_home()   # step 1
-    x = input ('Enter 7: ')
-    suction_pipe_up(100)
-
-    x = input ('Enter 8: ')
-    suction_pipe_down(100)
-
-    
-    x = input ("Enter 7: ")
-    filteration_unit_config()
-    filteration_flask_config()
-    Filteration_flask_up(1150)
-    
-    x = input ("Enter 7: ")
-    
-    Consumable_up(290)    # step 3
-    upper_suction_pump_on(100)
-    time.sleep(1)
-    suction_pump_up(3110)
-    upper_suction_pump_off()
-    Consumable_down(290)
-    
-    x = input ("Enter 8: ")
-    
-    petri_dishes_down(800)
-    Media_dispensor_up(520)
-    petri_dishes_up(800)
-    
-    x = input ("Enter 9: ")
-    #  Filter Paper
-    Consumable_up(290)
-    suction_pump_home()
-    suction_pump_up(420)
-    Consumable_up(310)
-    upper_suction_pump_on(35)
-    time.sleep(2)
-    Consumable_down(310)
-    suction_pump_up(1220)
-    upper_suction_pump_off()
-    Consumable_down(290)
-    
-    x = input ("Enter 10: ")
-    filteration_suction_pump_on(90)
-    time.sleep(2)
-    filteration_suction_pump_off()
-    
-    filteration_unit_config()
-    filteration_flask_config()
-    Filteration_flask_up(32)
-    Filteration_unit_up(850)
-    
-    
-    #solinoid
-    x= input ("Enter 11: ")
-    solinoid_value_to_filteration()
-    
-    x = input ("Enter 12: ")
-    filteration_suction_pump_on(90)
-    time.sleep(5) 
-    filteration_suction_pump_off()
-    
-    x = input ("Enter 13: ")
-    filteration_unit_config()
-    Filteration_flask_up(1150)
-    
-    
-    x= input ("Enter 12: ") #carefully observe
-    upper_suction_pump_on(100)
-    time.sleep(5)
-    suction_pump_up(1820)
-    upper_suction_pump_off()
-    time.sleep(3)
-    suction_pump_down(1820)
-    
-    x = input ("Enter 13: ")
-    petri_dishes_home()
-    Camera_up(500)
-    Camera_down(500)
-    
 
 except KeyboardInterrupt:
     print("\nInterrupted (Ctrl+C).")
