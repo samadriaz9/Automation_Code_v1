@@ -202,20 +202,30 @@ try:
     petri_dishes_up(330)
     run_relay(P7, 3)
     time.sleep(3)
-    _usb_camera_worker = start_usb_camera_thread(device_index=0)
-    x = input ("Camera Configuration Required")
-    # One process may hold /dev/video* at a time — release preview before imaging opens the camera.
-    stop_usb_camera_thread(_usb_camera_worker)
-    _usb_camera_worker = None
-    time.sleep(0.5)
+    print("Wanna do configuration for camera? (y/n)")
+    yn = input()
+    if yn == "y":
+        _usb_camera_worker = start_usb_camera_thread(device_index=0)
+        print("press y again when camera is configured")
+        yn = input()
+        if yn == "y":
+            _usb_camera_worker = None
+            stop_usb_camera_thread(_usb_camera_worker)
+            time.sleep(2)
+    
+    print("Starting imaging capture pattern")
     start_imaging_capture_pattern()
+    time.sleep(0.5)
+    print("Imaging capture pattern completed")
+    
+    print("Moving petri dishes home")
     petri_dishes_home()
+    print("Moving petri dishes down")
     petri_dishes_down(3290)
+    print("Moving incubator lid up")
     incubator_lid_up(200)
     run_relay(P7, 3)
     time.sleep(3)
-    stop_usb_camera_thread(_usb_camera_worker)
-    _usb_camera_worker = None
     
 
     print("camera on")
