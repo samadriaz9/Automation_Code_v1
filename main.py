@@ -188,6 +188,10 @@ try:
     time.sleep(3)
     _usb_camera_worker = start_usb_camera_thread(device_index=0)
     x = input ("Camera Configuration Required")
+    # One process may hold /dev/video* at a time — release preview before imaging opens the camera.
+    stop_usb_camera_thread(_usb_camera_worker)
+    _usb_camera_worker = None
+    time.sleep(0.5)
     start_imaging_capture_pattern()
     petri_dishes_home()
     petri_dishes_down(3290)

@@ -12,6 +12,7 @@ to run the capture pattern and save images.
 """
 
 import os
+import sys
 import time
 
 import cv2
@@ -72,9 +73,17 @@ def start_imaging_capture_pattern(
     """
     output_dir = _next_exp_dir(output_root)
 
-    cap = cv2.VideoCapture(int(camera_device_index))
+    idx = int(camera_device_index)
+    if sys.platform.startswith("linux"):
+        cap = cv2.VideoCapture(idx, cv2.CAP_V4L2)
+    else:
+        cap = cv2.VideoCapture(idx)
     if not cap.isOpened():
-        raise RuntimeError(f"Could not open USB camera /dev/video{camera_device_index}")
+        raise RuntimeError(
+            f"Could not open USB camera index {idx} (/dev/video{idx}). "
+            "Ensure no other code holds the device (stop preview threads first). "
+            "If the device is not at video0, pass camera_device_index=..."
+        )
 
     try:
         image_idx = 1

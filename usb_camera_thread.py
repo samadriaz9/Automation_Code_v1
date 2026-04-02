@@ -1,3 +1,4 @@
+import sys
 import threading
 import time
 
@@ -25,7 +26,10 @@ class USBCameraWorker:
             print(f"[USB Camera] OpenCV import failed: {exc}")
             return
 
-        cap = cv2.VideoCapture(self.device_index)
+        if sys.platform.startswith("linux"):
+            cap = cv2.VideoCapture(self.device_index, cv2.CAP_V4L2)
+        else:
+            cap = cv2.VideoCapture(self.device_index)
         if not cap.isOpened():
             print(f"[USB Camera] Could not open /dev/video{self.device_index}")
             return
@@ -63,7 +67,7 @@ class USBCameraWorker:
             self._cap = None
             print("[USB Camera] Stopped")
 
-    def stop(self, join_timeout=2.0):
+    def stop(self, join_timeout=4.0):
         self._stop_event.set()
         if self._thread and self._thread.is_alive():
             self._thread.join(timeout=float(join_timeout))
