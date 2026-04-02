@@ -188,6 +188,7 @@ try:
     time.sleep(3)
     _usb_camera_worker = start_usb_camera_thread(device_index=0)
     x = input ("Camera Configuration Required")
+    start_imaging_capture_pattern()
     petri_dishes_home()
     petri_dishes_down(3290)
     incubator_lid_up(200)
