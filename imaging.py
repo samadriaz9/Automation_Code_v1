@@ -41,7 +41,7 @@ def _next_exp_dir(output_root="."):
         idx += 1
 
 
-def _capture_frame(cap, out_path, flush_frames=4, read_retries=5):
+def _capture_frame(cap, out_path, flush_frames=4, read_retries=5, square_crop=False):
     """Grab a fresh frame and save JPG (with retries for noisy streams)."""
     flush_frames = max(0, int(flush_frames))
     read_retries = max(1, int(read_retries))
@@ -60,6 +60,9 @@ def _capture_frame(cap, out_path, flush_frames=4, read_retries=5):
             if not ok or frame is None:
                 raise RuntimeError("USB camera frame read failed")
 
+            if bool(square_crop):
+                frame = _crop_center_square(frame)
+
             ok_write = cv2.imwrite(out_path, frame)
             if not ok_write:
                 raise RuntimeError("cv2.imwrite failed")
@@ -71,14 +74,25 @@ def _capture_frame(cap, out_path, flush_frames=4, read_retries=5):
     raise RuntimeError(f"USB camera capture failed after retries: {last_err}")
 
 
+def _crop_center_square(frame):
+    """Crop a frame to a centered square (best-effort for square output)."""
+    h, w = frame.shape[:2]
+    side = min(w, h)
+    x0 = int((w - side) / 2)
+    y0 = int((h - side) / 2)
+    return frame[y0 : y0 + side, x0 : x0 + side]
+
+
 def start_imaging_capture_pattern(
     output_root=".",
     camera_device_index=0,
     rows=4,
     cols=4,
-    camera_step_per_col=350,
-    petri_step_per_row=300,
+    camera_step_per_col=100,
+    petri_step_per_row=100,
     camera_reset_each_row=True,
+    square_crop=True,
+    square_grid=True,
     settle_seconds=0.15,
 ):
     """
@@ -118,12 +132,15 @@ def start_imaging_capture_pattern(
         pass
 
     try:
+        if bool(square_grid):
+            petri_step_per_row = int(camera_step_per_col)
+
         image_idx = 1
         for r in range(int(rows)):
             for c in range(int(cols)):
                 img_name = f"{image_idx}.jpg"
                 out_path = os.path.join(output_dir, img_name)
-                _capture_frame(cap, out_path)
+                _capture_frame(cap, out_path, square_crop=bool(square_crop))
                 image_idx += 1
                 time.sleep(settle_seconds)
 
