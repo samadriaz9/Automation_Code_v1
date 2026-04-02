@@ -111,6 +111,7 @@ from solinoid_value_to_filteration import (
     solinoid_value_to_filteration,
     solinoid_value_to_filteration_on,
     solinoid_value_to_filteration_off,
+    water_level_reached,
     cleanup as solenoid_cleanup,
 )
 from solinoid_value_drain import (
@@ -199,10 +200,15 @@ try:
     filteration_unit_config()
     filteration_flask_config()
     Filteration_flask_up(1140)
-    suction_pipe_up(1020)
-    upper_suction_pump_on(25)
+    suction_pipe_up(1010)
+    upper_suction_pump_on(22)
     time.sleep(3)
-    suction_pipe_down(1020)
+    for i in range(10):
+        suction_pump_up(3)
+        suction_pump_down(3)
+        time.sleep(0.01)
+    time.sleep(1)
+    suction_pipe_down(1010)
     suction_pump_up(1245)
     filteration_suction_pump_on(100)
     upper_suction_pump_off()
@@ -219,7 +225,17 @@ try:
     time.sleep(1)
     solinoid_value_to_filteration()
     filteration_suction_pump_on(90)
-    time.sleep(10)
+    time.sleep(20)
+    while water_level_reached():
+        filteration_suction_pump_off()
+        print(
+            "Water level sensor still reads FULL after filtration pump run — pump may not be drawing. "
+            "Fix the pump or plumbing before continuing."
+        )
+        input("Press Enter after fixing to re-run pump (90% for 20 s) and re-check...")
+        filteration_suction_pump_on(90)
+        time.sleep(20)
+
     filteration_suction_pump_off()
     
     x = input ("3. Enter for picking up media pad plus petri dishes")
