@@ -203,6 +203,7 @@ try:
     suction_pipe_up(1010)
     upper_suction_pump_on(22)
     time.sleep(3)
+    suction_pipe_down(50)
     for i in range(10):
         suction_pump_up(3)
         suction_pump_down(3)
@@ -324,23 +325,12 @@ try:
             stop_usb_camera_thread(_usb_camera_worker)
             _usb_camera_worker = None
             time.sleep(0.5)
-    for i in range(10):
-        ok, frame = cap.read()
-        if ok:
-            break
-        else:
-            run_relay(P7, 3)
-            time.sleep(3)
+    
     if ok:
-        print("Camera is on")
-    else:
-        print("Camera is off")
-        sys.exit(1)
-
-    print("Starting imaging capture pattern")
-    start_imaging_capture_pattern()
-    time.sleep(0.5)
-    print("Imaging capture pattern completed")
+        print("Starting imaging capture pattern")
+        start_imaging_capture_pattern()
+        time.sleep(0.5)
+        print("Imaging capture pattern completed")
     
     print("Moving petri dishes home")
     petri_dishes_home()
