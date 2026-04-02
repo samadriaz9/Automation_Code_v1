@@ -84,44 +84,85 @@ def _crop_center_square(frame):
     return frame[y0 : y0 + side, x0 : x0 + side]
 
 
+def _crop_center_fraction(img, fraction):
+    """Keep the center ``fraction`` of width and height (e.g. 1/3 → middle third)."""
+    f = float(fraction)
+    if f >= 1.0 - 1e-6:
+        return img
+    if f <= 0:
+        raise ValueError("fraction must be > 0")
+    h, w = img.shape[:2]
+    nh = max(1, int(round(h * f)))
+    nw = max(1, int(round(w * f)))
+    y0 = (h - nh) // 2
+    x0 = (w - nw) // 2
+    return img[y0 : y0 + nh, x0 : x0 + nw]
+
+
+def _tile_index_rowmajor(row, col, ncols):
+    """1-based linear index for row-major grid (row,col 0-based)."""
+    return int(row) * int(ncols) + int(col) + 1
+
+
 def _build_mosaic_from_tiles(
     output_dir,
-    rows,
-    cols,
+    capture_rows,
+    capture_cols,
+    mosaic_rows,
+    mosaic_cols,
+    mosaic_window_row0=0,
+    mosaic_window_col0=0,
     mosaic_name="mosaic.jpg",
     flip_x=False,
     flip_y=False,
     axis_swap=False,
+    mosaic_center_fraction=1.0,
 ):
-    """Stitch numbered tiles (1.jpg..rows*cols.jpg) into one big image.
+    """Stitch a mosaic from a rectangular window of captured tiles.
 
-    flip_x: mirror along X (left/right)
-    flip_y: mirror along Y (top/bottom)
-    axis_swap: swap meaning of capture row/col -> mosaic row/col
+    Captures are ``1.jpg .. (capture_rows*capture_cols).jpg`` in row-major order.
+    The mosaic uses tiles from capture cells
+    (mosaic_window_row0 .. +mosaic_rows-1, mosaic_window_col0 .. +mosaic_cols-1).
+
+    flip_x / flip_y / axis_swap: same layout fix as on hardware (swap+flipY for this rig).
+
+    mosaic_center_fraction: if < 1, keep only the center fraction of each tile, then
+        resize to the cell size (e.g. 1/3 to drop overlap when using a denser 7x7 scan).
     """
-    rows = int(rows)
-    cols = int(cols)
-    total = rows * cols
-    if total <= 0:
-        raise ValueError("rows*cols must be > 0")
+    capture_rows = int(capture_rows)
+    capture_cols = int(capture_cols)
+    mosaic_rows = int(mosaic_rows)
+    mosaic_cols = int(mosaic_cols)
+    wr0 = int(mosaic_window_row0)
+    wc0 = int(mosaic_window_col0)
+    if capture_rows <= 0 or capture_cols <= 0 or mosaic_rows <= 0 or mosaic_cols <= 0:
+        raise ValueError("capture and mosaic rows/cols must be > 0")
+    if wr0 < 0 or wc0 < 0:
+        raise ValueError("mosaic window offset must be >= 0")
+    if wr0 + mosaic_rows > capture_rows or wc0 + mosaic_cols > capture_cols:
+        raise ValueError(
+            f"mosaic window ({wr0}+{mosaic_rows}, {wc0}+{mosaic_cols}) "
+            f"exceeds capture grid ({capture_rows}x{capture_cols})"
+        )
 
-    first_path = os.path.join(output_dir, "1.jpg")
+    first_idx = _tile_index_rowmajor(wr0, wc0, capture_cols)
+    first_path = os.path.join(output_dir, f"{first_idx}.jpg")
     first = cv2.imread(first_path)
     if first is None:
-        raise RuntimeError(f"Could not read first tile: {first_path}")
+        raise RuntimeError(f"Could not read first mosaic source tile: {first_path}")
 
     tile_h, tile_w = first.shape[:2]
     tile_shape_tail = first.shape[2:] if len(first.shape) > 2 else ()
 
-    # Mosaic output size depends on whether we swap axes.
-    out_rows = cols if bool(axis_swap) else rows
-    out_cols = rows if bool(axis_swap) else cols
+    out_rows = mosaic_cols if bool(axis_swap) else mosaic_rows
+    out_cols = mosaic_rows if bool(axis_swap) else mosaic_cols
     mosaic = np.zeros((out_rows * tile_h, out_cols * tile_w) + tile_shape_tail, dtype=first.dtype)
 
-    for r in range(rows):
-        for c in range(cols):
-            # Capture order is row-major: r=0..rows-1, c=0..cols-1.
-            tile_idx = r * cols + c + 1
+    for mr in range(mosaic_rows):
+        for mc in range(mosaic_cols):
+            cap_r = wr0 + mr
+            cap_c = wc0 + mc
+            tile_idx = _tile_index_rowmajor(cap_r, cap_c, capture_cols)
             tile_path = os.path.join(output_dir, f"{tile_idx}.jpg")
             tile = cv2.imread(tile_path)
             if tile is None:
@@ -130,19 +171,20 @@ def _build_mosaic_from_tiles(
             if tile.shape[0] != tile_h or tile.shape[1] != tile_w:
                 tile = cv2.resize(tile, (tile_w, tile_h), interpolation=cv2.INTER_AREA)
 
-            # Destination coordinates in the mosaic (with optional flips).
-            # If axis_swap is True, treat capture "column" as mosaic row and
-            # capture "row" as mosaic column.
+            tile = _crop_center_fraction(tile, mosaic_center_fraction)
+            if tile.shape[0] != tile_h or tile.shape[1] != tile_w:
+                tile = cv2.resize(tile, (tile_w, tile_h), interpolation=cv2.INTER_CUBIC)
+
             if bool(axis_swap):
-                base_r = c
-                base_c = r
-                max_r = cols - 1
-                max_c = rows - 1
+                base_r = mc
+                base_c = mr
+                max_r = mosaic_cols - 1
+                max_c = mosaic_rows - 1
             else:
-                base_r = r
-                base_c = c
-                max_r = rows - 1
-                max_c = cols - 1
+                base_r = mr
+                base_c = mc
+                max_r = mosaic_rows - 1
+                max_c = mosaic_cols - 1
 
             dest_r = (max_r - base_r) if bool(flip_y) else base_r
             dest_c = (max_c - base_c) if bool(flip_x) else base_c
@@ -161,8 +203,12 @@ def _build_mosaic_from_tiles(
 def start_imaging_capture_pattern(
     output_root=".",
     camera_device_index=0,
-    rows=6,
-    cols=6,
+    rows=7,
+    cols=7,
+    mosaic_rows=6,
+    mosaic_cols=6,
+    mosaic_window_row0=0,
+    mosaic_window_col0=0,
     camera_step_per_col=85,
     petri_step_per_row=85,
     camera_reset_each_row=True,
@@ -170,6 +216,7 @@ def start_imaging_capture_pattern(
     square_grid=True,
     save_mosaic=True,
     mosaic_name="mosaic.jpg",
+    mosaic_center_fraction=1.0 / 3.0,
     settle_seconds=0.15,
 ):
     """
@@ -183,6 +230,12 @@ def start_imaging_capture_pattern(
     - Slide across each row by moving camera towards "up" for each next column.
     - Shift to the next row by moving petri dishes towards "up".
     - Optionally reset camera back to column 0 after each row (needed to keep a square coverage area).
+
+    Capture grid is ``rows``×``cols`` (default 7×7). ``mosaic.jpg`` is built as ``mosaic_rows``×``mosaic_cols``
+    (default 6×6) by taking a window of source tiles starting at
+    ``(mosaic_window_row0, mosaic_window_col0)`` in the capture grid—so the extra 7th row/column
+    can be dropped without rescanning. Each mosaic cell uses ``mosaic_center_fraction`` of the
+    center of that tile (default 1/3). Set offsets to (1,0), (0,1), or (1,1) to trim different sides.
 
     Returns:
         output_dir path containing captured images.
@@ -244,12 +297,17 @@ def start_imaging_capture_pattern(
             # Matches physical layout: axis swap + flip Y (was swap_flipY_mosaic.jpg).
             path = _build_mosaic_from_tiles(
                 output_dir=output_dir,
-                rows=int(rows),
-                cols=int(cols),
+                capture_rows=int(rows),
+                capture_cols=int(cols),
+                mosaic_rows=int(mosaic_rows),
+                mosaic_cols=int(mosaic_cols),
+                mosaic_window_row0=int(mosaic_window_row0),
+                mosaic_window_col0=int(mosaic_window_col0),
                 mosaic_name=mosaic_name,
                 flip_x=False,
                 flip_y=True,
                 axis_swap=True,
+                mosaic_center_fraction=float(mosaic_center_fraction),
             )
             print(f"[Imaging] Mosaic saved: {path}")
         return output_dir
