@@ -91,11 +91,13 @@ def _build_mosaic_from_tiles(
     mosaic_name="mosaic.jpg",
     flip_x=False,
     flip_y=False,
+    axis_swap=False,
 ):
     """Stitch numbered tiles (1.jpg..rows*cols.jpg) into one big image.
 
     flip_x: mirror along X (left/right)
     flip_y: mirror along Y (top/bottom)
+    axis_swap: swap meaning of capture row/col -> mosaic row/col
     """
     rows = int(rows)
     cols = int(cols)
@@ -111,7 +113,10 @@ def _build_mosaic_from_tiles(
     tile_h, tile_w = first.shape[:2]
     tile_shape_tail = first.shape[2:] if len(first.shape) > 2 else ()
 
-    mosaic = np.zeros((rows * tile_h, cols * tile_w) + tile_shape_tail, dtype=first.dtype)
+    # Mosaic output size depends on whether we swap axes.
+    out_rows = cols if bool(axis_swap) else rows
+    out_cols = rows if bool(axis_swap) else cols
+    mosaic = np.zeros((out_rows * tile_h, out_cols * tile_w) + tile_shape_tail, dtype=first.dtype)
 
     for r in range(rows):
         for c in range(cols):
@@ -126,8 +131,21 @@ def _build_mosaic_from_tiles(
                 tile = cv2.resize(tile, (tile_w, tile_h), interpolation=cv2.INTER_AREA)
 
             # Destination coordinates in the mosaic (with optional flips).
-            dest_r = (rows - 1 - r) if bool(flip_y) else r
-            dest_c = (cols - 1 - c) if bool(flip_x) else c
+            # If axis_swap is True, treat capture "column" as mosaic row and
+            # capture "row" as mosaic column.
+            if bool(axis_swap):
+                base_r = c
+                base_c = r
+                max_r = cols - 1
+                max_c = rows - 1
+            else:
+                base_r = r
+                base_c = c
+                max_r = rows - 1
+                max_c = cols - 1
+
+            dest_r = (max_r - base_r) if bool(flip_y) else base_r
+            dest_c = (max_c - base_c) if bool(flip_x) else base_c
 
             y0 = dest_r * tile_h
             x0 = dest_c * tile_w
@@ -225,12 +243,26 @@ def start_imaging_capture_pattern(
         if bool(save_mosaic):
             # Generate multiple orientations so you can pick the correct one quickly.
             # (The physical "up" direction vs image "top" direction can be opposite.)
-            variants = [
-                ("normal", False, False, mosaic_name),
-                ("flipX", True, False, f"flipX_{mosaic_name}"),
-                ("flipY", False, True, f"flipY_{mosaic_name}"),
-                ("flipXY", True, True, f"flipXY_{mosaic_name}"),
-            ]
+            variants = []
+            # row-major layout variants
+            variants.extend(
+                [
+                    ("row_normal", False, False, mosaic_name),
+                    ("row_flipX", True, False, f"flipX_{mosaic_name}"),
+                    ("row_flipY", False, True, f"flipY_{mosaic_name}"),
+                    ("row_flipXY", True, True, f"flipXY_{mosaic_name}"),
+                ]
+            )
+            # axis-swapped layout variants (if camera columns map to mosaic rows)
+            variants.extend(
+                [
+                    ("swap_normal", False, False, f"swap_{mosaic_name}"),
+                    ("swap_flipX", True, False, f"swap_flipX_{mosaic_name}"),
+                    ("swap_flipY", False, True, f"swap_flipY_{mosaic_name}"),
+                    ("swap_flipXY", True, True, f"swap_flipXY_{mosaic_name}"),
+                ]
+            )
+
             for _, flip_x, flip_y, name in variants:
                 path = _build_mosaic_from_tiles(
                     output_dir=output_dir,
@@ -239,6 +271,7 @@ def start_imaging_capture_pattern(
                     mosaic_name=name,
                     flip_x=flip_x,
                     flip_y=flip_y,
+                    axis_swap=bool(name.startswith("swap_")),
                 )
                 print(f"[Imaging] Mosaic saved: {path}")
         return output_dir
