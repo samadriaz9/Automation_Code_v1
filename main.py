@@ -188,7 +188,6 @@ try:
         if ok:
             run_relay(P7, 3)
             time.sleep(3)
-            run_relay(P7, 3)
             print("camera off")
     except Exception as e:
         print(f"Camera not found")
