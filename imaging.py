@@ -84,8 +84,19 @@ def _crop_center_square(frame):
     return frame[y0 : y0 + side, x0 : x0 + side]
 
 
-def _build_mosaic_from_tiles(output_dir, rows, cols, mosaic_name="mosaic.jpg"):
-    """Stitch numbered tiles (1.jpg..rows*cols.jpg) into one big image."""
+def _build_mosaic_from_tiles(
+    output_dir,
+    rows,
+    cols,
+    mosaic_name="mosaic.jpg",
+    flip_x=False,
+    flip_y=False,
+):
+    """Stitch numbered tiles (1.jpg..rows*cols.jpg) into one big image.
+
+    flip_x: mirror along X (left/right)
+    flip_y: mirror along Y (top/bottom)
+    """
     rows = int(rows)
     cols = int(cols)
     total = rows * cols
@@ -104,8 +115,9 @@ def _build_mosaic_from_tiles(output_dir, rows, cols, mosaic_name="mosaic.jpg"):
 
     for r in range(rows):
         for c in range(cols):
-            image_idx = r * cols + c + 1
-            tile_path = os.path.join(output_dir, f"{image_idx}.jpg")
+            # Capture order is row-major: r=0..rows-1, c=0..cols-1.
+            tile_idx = r * cols + c + 1
+            tile_path = os.path.join(output_dir, f"{tile_idx}.jpg")
             tile = cv2.imread(tile_path)
             if tile is None:
                 raise RuntimeError(f"Could not read tile: {tile_path}")
@@ -113,8 +125,12 @@ def _build_mosaic_from_tiles(output_dir, rows, cols, mosaic_name="mosaic.jpg"):
             if tile.shape[0] != tile_h or tile.shape[1] != tile_w:
                 tile = cv2.resize(tile, (tile_w, tile_h), interpolation=cv2.INTER_AREA)
 
-            y0 = r * tile_h
-            x0 = c * tile_w
+            # Destination coordinates in the mosaic (with optional flips).
+            dest_r = (rows - 1 - r) if bool(flip_y) else r
+            dest_c = (cols - 1 - c) if bool(flip_x) else c
+
+            y0 = dest_r * tile_h
+            x0 = dest_c * tile_w
             mosaic[y0 : y0 + tile_h, x0 : x0 + tile_w] = tile
 
     mosaic_path = os.path.join(output_dir, mosaic_name)
@@ -127,8 +143,8 @@ def _build_mosaic_from_tiles(output_dir, rows, cols, mosaic_name="mosaic.jpg"):
 def start_imaging_capture_pattern(
     output_root=".",
     camera_device_index=0,
-    rows=5,
-    cols=5,
+    rows=6,
+    cols=6,
     camera_step_per_col=100,
     petri_step_per_row=100,
     camera_reset_each_row=True,
@@ -207,13 +223,24 @@ def start_imaging_capture_pattern(
 
         print(f"[Imaging] Capture complete: {output_dir}")
         if bool(save_mosaic):
-            mosaic_path = _build_mosaic_from_tiles(
-                output_dir=output_dir,
-                rows=int(rows),
-                cols=int(cols),
-                mosaic_name=mosaic_name,
-            )
-            print(f"[Imaging] Mosaic saved: {mosaic_path}")
+            # Generate multiple orientations so you can pick the correct one quickly.
+            # (The physical "up" direction vs image "top" direction can be opposite.)
+            variants = [
+                ("normal", False, False, mosaic_name),
+                ("flipX", True, False, f"flipX_{mosaic_name}"),
+                ("flipY", False, True, f"flipY_{mosaic_name}"),
+                ("flipXY", True, True, f"flipXY_{mosaic_name}"),
+            ]
+            for _, flip_x, flip_y, name in variants:
+                path = _build_mosaic_from_tiles(
+                    output_dir=output_dir,
+                    rows=int(rows),
+                    cols=int(cols),
+                    mosaic_name=name,
+                    flip_x=flip_x,
+                    flip_y=flip_y,
+                )
+                print(f"[Imaging] Mosaic saved: {path}")
         return output_dir
     finally:
         cap.release()
