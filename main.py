@@ -199,10 +199,10 @@ try:
     suction_pipe_home()
     suction_pump_down(930)
     upper_suction_pump_off()
-    suction_pipe_up(500)
+    suction_pipe_up(1000)
     for i in range(200):
-        suction_pump_up(5)
-        suction_pump_down(5)
+        suction_pump_up(25)
+        suction_pump_down(25)
         time.sleep(0.01)
     time.sleep(2)
 
