@@ -182,6 +182,22 @@ atexit.register(shutdown_all)
 
 try:
 
+    x = input ('Enter to put in trash: ')
+    incubator_lid_home()
+    petri_dishes_home()
+    petri_dishes_down(300)
+    suction_pipe_home()
+    suction_pump_home()
+    suction_pump_up(3055)
+    suction_pipe_up(1200)
+    upper_suction_pump_on(100)
+    time.sleep(2)
+    suction_pipe_home()
+    suction_pipe_down(800)
+    upper_suction_pump_off()
+    time.sleep(2)
+
+    x = input ('home: ?')
     incubator_lid_home()
     petri_dishes_home()
     petri_dishes_down(3290)
