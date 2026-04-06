@@ -14,6 +14,7 @@ Filtration solenoid: GPIO 26 (BCM), pin 37 (see solinoid_value_to_filteration.py
 Shutdown: Ctrl+C runs full cleanup (see shutdown_all). SIGTERM (kill) also cleans up.
 """
 import atexit
+import gc
 from pdb import run
 import signal
 import sys
@@ -164,6 +165,9 @@ def shutdown_all():
         except Exception as e:
             print(f"  Cleanup warning ({name}): {e}")
 
+    # Finalize PWM wrappers while GPIO is still valid (avoids RPi.GPIO PWM.__del__ after cleanup).
+    gc.collect()
+
     try:
         GPIO.cleanup()
     except Exception:
@@ -189,11 +193,11 @@ try:
     suction_pipe_home()
     suction_pump_home()
     suction_pump_up(3055)
-    suction_pipe_up(1200)
+    suction_pipe_up(1100)
     upper_suction_pump_on(100)
     time.sleep(2)
     suction_pipe_home()
-    suction_pump_down(800)
+    suction_pump_down(900)
     upper_suction_pump_off()
     time.sleep(2)
 

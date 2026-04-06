@@ -58,12 +58,17 @@ def upper_suction_pump(speed, seconds):
 def cleanup():
     """Call once when program exits."""
     global _pwm_initialized, rpwm
-    if _pwm_initialized:
+    if _pwm_initialized and rpwm is not None:
+        try:
+            rpwm.ChangeDutyCycle(0)
+        except Exception:
+            pass
         try:
             rpwm.stop()
         except Exception:
             pass
-        _pwm_initialized = False
+    rpwm = None
+    _pwm_initialized = False
 
 
 # Backward-compatible aliases (older code may still import these names).
