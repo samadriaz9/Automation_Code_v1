@@ -181,6 +181,13 @@ signal.signal(signal.SIGTERM, _on_sigterm)
 atexit.register(shutdown_all)
 
 try:
+
+
+
+
+
+    x = input ('Enter TO START MACHINE : ')
+   
     x = input ('Enter for media despensor home: ')
     Media_dispensor_home()
     x= input ('Enter for media dispensor move up: ')
