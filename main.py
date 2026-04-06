@@ -182,6 +182,10 @@ atexit.register(shutdown_all)
 
 try:
 
+    incubator_lid_home()
+    petri_dishes_home()
+    petri_dishes_down(3290)
+    incubator_lid_up(200)
 
 
 
@@ -347,6 +351,9 @@ try:
     incubator_lid_up(200)
     run_relay(P7, 3)
     time.sleep(3)
+
+
+
 
 except KeyboardInterrupt:
     print("\nInterrupted (Ctrl+C).")
