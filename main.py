@@ -200,9 +200,9 @@ try:
     suction_pump_down(930)
     upper_suction_pump_off()
     suction_pipe_up(500)
-    for i in range(40):
-        suction_pump_up(5)
-        suction_pump_down(5)
+    for i in range(100):
+        suction_pump_up(15)
+        suction_pump_down(15)
         time.sleep(0.01)
     time.sleep(2)
 
