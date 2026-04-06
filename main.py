@@ -186,7 +186,7 @@ atexit.register(shutdown_all)
 
 try:
 
-    x = input ('Enter to put in trash: ')
+    x = input ('Enter to put media pad in trash: ')
     incubator_lid_home()
     petri_dishes_home()
     petri_dishes_down(1025)
@@ -201,8 +201,8 @@ try:
     upper_suction_pump_off()
     suction_pipe_up(800)
     for i in range(20):
-        suction_pump_up(100)
-        suction_pump_down(100)
+        suction_pump_up(120)
+        suction_pump_down(120)
         time.sleep(0.01)
     time.sleep(2)
 
@@ -376,6 +376,30 @@ try:
     incubator_lid_up(200)
     run_relay(P7, 3)
     time.sleep(3)
+
+
+    x = input ('Enter to put filter paper in trash: ')
+    incubator_lid_home()
+    petri_dishes_home()
+    petri_dishes_down(1025)
+    suction_pipe_home()
+    suction_pump_home()
+    suction_pump_up(3055)
+    suction_pipe_up(1010)
+    upper_suction_pump_on(100)
+    time.sleep(2)
+    suction_pipe_home()
+    suction_pump_down(930)
+    upper_suction_pump_off()
+    suction_pipe_up(800)
+    for i in range(20):
+        suction_pump_up(120)
+        suction_pump_down(120)
+        time.sleep(0.01)
+    time.sleep(2)
+
+
+
 
 
 
