@@ -185,6 +185,45 @@ signal.signal(signal.SIGTERM, _on_sigterm)
 atexit.register(shutdown_all)
 
 try:
+    x = input ("step 5: Enter to put filter paper on filteration flask")
+    suction_pipe_home()
+    suction_pump_home()
+    filteration_unit_config()
+    filteration_flask_config()
+    Filteration_flask_up(1140)
+    suction_pipe_up(1000)
+    upper_suction_pump_on(100)
+    time.sleep(3)
+    suction_pipe_down(300)
+    time.sleep(1)
+    upper_suction_pump_off()
+    time.sleep(1)
+    upper_suction_pump_on(100)
+    time.sleep(1)
+    upper_suction_pump_on(15)
+    for i in range(100):
+        suction_pipe_down(20)
+        suction_pipe_up(20)
+        suction_pump_up(10)
+        suction_pump_down(10)
+        time.sleep(0.01)
+    time.sleep(1)
+    suction_pipe_down(1010)
+    suction_pump_up(1245)
+    filteration_suction_pump_on(100)
+    upper_suction_pump_off()
+    suction_pipe_up(600)
+    time.sleep(2)
+    suction_pipe_home()
+
+
+
+
+
+
+
+
+
     x = input ('Enter TO START MACHINE : ')
     Media_dispensor_home()
     time.sleep(2)
@@ -224,15 +263,16 @@ try:
     filteration_unit_config()
     filteration_flask_config()
     Filteration_flask_up(1140)
-    suction_pipe_up(1010)
+    suction_pipe_up(1000)
     upper_suction_pump_on(100)
     time.sleep(3)
     suction_pipe_down(300)
+    time.sleep(1)
     upper_suction_pump_off()
     time.sleep(1)
     upper_suction_pump_on(100)
     time.sleep(1)
-    upper_suction_pump_on(25)
+    upper_suction_pump_on(15)
     for i in range(100):
         suction_pipe_down(20)
         suction_pipe_up(20)
