@@ -185,51 +185,39 @@ signal.signal(signal.SIGTERM, _on_sigterm)
 atexit.register(shutdown_all)
 
 try:
-    x = input ('Enter to put media pad in trash: ')
-    incubator_lid_home()
-    petri_dishes_home()
-    petri_dishes_down(1025)
-    suction_pipe_home()
-    suction_pump_home()
-    suction_pump_up(3055)
-    suction_pipe_up(1010)
-    upper_suction_pump_on(100)
-    time.sleep(2)
-    suction_pipe_home()
-    suction_pump_down(930)
-    upper_suction_pump_off()
-    suction_pipe_up(800)
-    for i in range(20):
-        suction_pump_up(120)
-        suction_pump_down(120)
-        time.sleep(0.01)
-    time.sleep(2)
-
-    x = input ('home: ?')
-    incubator_lid_home()
-    petri_dishes_home()
-    petri_dishes_down(3290)
-    incubator_lid_up(200)
-
-
-
-
     x = input ('Enter TO START MACHINE : ')
-   
-    x = input ('Enter for media despensor home: ')
     Media_dispensor_home()
-    x= input ('Enter for media dispensor move up: ')
+    time.sleep(2)
+    incubator_lid_home()
+    time.sleep(2)
+    suction_pipe_home()
+    time.sleep(2)
+    filteration_unit_config()
+    time.sleep(2)
+    filteration_flask_config()
+    time.sleep(2)
+    petri_dishes_home()
+    time.sleep(2)
+    suction_pump_home()
+    suction_pipe_up(400)
+    time.sleep(2)
+
+ 
+    x = input ('step 1: Enter to Empty Syringe: ')
+    Media_dispensor_home()
+    x= input ('step 2: Enter to change the media: ')
+    Media_dispensor_home()
     Media_dispensor_up(3500)
-    x = input ('Put in the syringe containging media: ')
+    x = input ('step 3: Enter to adjust syringe position: ')
     Media_dispensor_down(800)
     
     
-    x = input ("Enter to bring petri dishes home")
+    x = input ("step 4: Enter to bring petri dishes home")
     incubator_lid_home()
     petri_dishes_home()
     petri_dishes_down(1035)
     
-    x = input ("1. Enter to put filter paper on filteration flask")
+    x = input ("step 5: Enter to put filter paper on filteration flask")
     suction_pipe_home()
     suction_pump_home()
     filteration_unit_config()
@@ -253,7 +241,7 @@ try:
     filteration_suction_pump_on(20)
     suction_pipe_home()
 
-    x = input ("2. Enter to send filter paper to assembly")
+    x = input ("Step 6: Enter to send filter paper to assembly")
     filteration_unit_config()
     filteration_flask_config()
     Filteration_flask_up(32)
@@ -274,7 +262,7 @@ try:
 
     filteration_suction_pump_off()
     
-    x = input ("3. Enter for picking up media pad plus petri dishes")
+    x = input ("Step 7: Enter for picking up media pad plus petri dishes")
     suction_pump_home()
     suction_pipe_home()
     suction_pipe_up(1025)
@@ -285,7 +273,7 @@ try:
     suction_pipe_up(300)
     upper_suction_pump_off()
     
-    x = input ("4. Enter for poruing media")
+    x = input ("Step 8: Enter for poruing media")
     petri_dishes_home()
     petri_dishes_down(300)
     Media_dispensor_down(800)
@@ -293,13 +281,13 @@ try:
     petri_dishes_down(725)
     
     
-    x = input ("5. Enter to pick up filteration unit")
+    x = input ("Step 9: Enter to pick up filteration unit")
     filteration_unit_config()
     filteration_flask_config()
     Filteration_flask_up(1130)
     
     
-    x = input ("6. Picking up filter paper from filteration flask")
+    x = input ("Step 10: Picking up filter paper from filteration flask")
     suction_pipe_home()
     suction_pump_home()
     suction_pump_up(1245)
@@ -313,17 +301,17 @@ try:
     time.sleep(3)
     suction_pipe_home()
     
-    x = input ("7. Enter to shift it for incubation")
+    x = input ("Step 11: Enter to shift it for incubation")
     incubator_lid_home()
     petri_dishes_home()
     petri_dishes_down(3280)
     incubator_lid_up(200)
     
-    x = input ("8. Enter to start incubation")
+    x = input ("Step 12: Enter to start incubation")
     run_relay(P1, 1)
     Start_incubation(37, 1)
 
-    x  = input ("9. Enter to start pictures")
+    x  = input ("Step 13: Enter to start pictures")
     
     try:
         cap = cv2.VideoCapture(0)
@@ -377,7 +365,7 @@ try:
     time.sleep(3)
 
 
-    x = input ('Enter to put filter paper in trash: ')
+    x = input ('Step 14: Enter to put filter paper in trash: ')
     incubator_lid_home()
     petri_dishes_home()
     petri_dishes_down(1025)
@@ -396,6 +384,28 @@ try:
         suction_pump_down(120)
         time.sleep(0.01)
     time.sleep(2)
+
+
+    x = input ('Step 15: Enter to put media pad in trash: ')
+    incubator_lid_home()
+    petri_dishes_home()
+    petri_dishes_down(1025)
+    suction_pipe_home()
+    suction_pump_home()
+    suction_pump_up(3055)
+    suction_pipe_up(1010)
+    upper_suction_pump_on(100)
+    time.sleep(2)
+    suction_pipe_home()
+    suction_pump_down(930)
+    upper_suction_pump_off()
+    suction_pipe_up(800)
+    for i in range(20):
+        suction_pump_up(120)
+        suction_pump_down(120)
+        time.sleep(0.01)
+    time.sleep(2)
+
 
 
 except KeyboardInterrupt:
