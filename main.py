@@ -225,7 +225,7 @@ try:
     filteration_flask_config()
     Filteration_flask_up(1140)
     suction_pipe_up(1010)
-    upper_suction_pump_on(25)
+    upper_suction_pump_on(100)
     time.sleep(3)
     suction_pipe_down(300)
     upper_suction_pump_off()
