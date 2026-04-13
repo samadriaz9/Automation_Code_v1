@@ -191,7 +191,7 @@ try:
     filteration_unit_config()
     filteration_flask_config()
     Filteration_flask_up(1140)
-    suction_pipe_up(820)
+    suction_pipe_up(900)
     upper_suction_pump_on(40)
     time.sleep(3)
     suction_pipe_down(500)
