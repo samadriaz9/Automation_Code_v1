@@ -194,7 +194,7 @@ try:
     suction_pipe_up(900)
     upper_suction_pump_on(22)
     time.sleep(2)
-    suction_pipe_down(50)
+    suction_pipe_down(120)
     time.sleep(1)
     suction_pump_up(130)
     suction_pump_down(130)
