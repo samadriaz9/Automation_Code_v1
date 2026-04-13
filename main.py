@@ -333,12 +333,21 @@ try:
     petri_dishes_home()
     petri_dishes_down(3290)
     petri_dishes_up(330)
-    ok, frame = cap.read()
+    cap = cv2.VideoCapture(0)
+    for i in range(10):
+        ok, frame = cap.read()
+        if ok:
+            print("camera on")
+            break
+        else:
+            print("camera off")
     if ok:
         print("Starting imaging capture pattern")
         start_imaging_capture_pattern()
         time.sleep(0.5)
         print("Imaging capture pattern completed")
+    else:
+        print("camera not on")
     print("Moving petri dishes home")
     petri_dishes_home()
     print("Moving petri dishes down")
