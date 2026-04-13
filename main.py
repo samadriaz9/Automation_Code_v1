@@ -191,7 +191,7 @@ try:
     filteration_unit_config()
     filteration_flask_config()
     Filteration_flask_up(1140)
-    suction_pipe_up(1000)
+    suction_pipe_up(800)
     upper_suction_pump_on(100)
     time.sleep(3)
     suction_pipe_down(300)
@@ -200,7 +200,7 @@ try:
     time.sleep(1)
     upper_suction_pump_on(100)
     time.sleep(1)
-    upper_suction_pump_on(15)
+    upper_suction_pump_on(22)
     for i in range(100):
         suction_pipe_down(20)
         suction_pipe_up(20)
