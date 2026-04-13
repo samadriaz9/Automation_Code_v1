@@ -316,10 +316,13 @@ try:
     try:
         cap = cv2.VideoCapture(0)
         ok, frame = cap.read()
+        ok, frame = cap.read()
         if ok:
+            print("camera on")
+        else:
             run_relay(P7, 3)
             time.sleep(3)
-            print("camera off")
+            print("camera switched on")
     except Exception as e:
         print(f"Camera not found")
         sys.exit(1)
@@ -332,29 +335,10 @@ try:
     petri_dishes_up(330)
     ok, frame = cap.read()
     if ok:
-        print("Camera is on")
-    else:
-        run_relay(P7, 3)
-        print("Camera switch on")
-    time.sleep(3)
-    print("Wanna do configuration for camera? (y/n)")
-    yn = input()
-    if yn == "y":
-        _usb_camera_worker = start_usb_camera_thread(device_index=0)
-        print("press y again when camera is configured")
-        yn = input()
-        if yn == "y":
-            # Stop the preview thread so imaging can open the camera device.
-            stop_usb_camera_thread(_usb_camera_worker)
-            _usb_camera_worker = None
-            time.sleep(0.5)
-    
-    if ok:
         print("Starting imaging capture pattern")
         start_imaging_capture_pattern()
         time.sleep(0.5)
         print("Imaging capture pattern completed")
-    
     print("Moving petri dishes home")
     petri_dishes_home()
     print("Moving petri dishes down")
@@ -362,6 +346,7 @@ try:
     print("Moving incubator lid up")
     incubator_lid_up(200)
     run_relay(P7, 3)
+    print("camera off")
     time.sleep(3)
 
 
@@ -405,8 +390,6 @@ try:
         suction_pump_down(120)
         time.sleep(0.01)
     time.sleep(2)
-
-
 
 except KeyboardInterrupt:
     print("\nInterrupted (Ctrl+C).")
