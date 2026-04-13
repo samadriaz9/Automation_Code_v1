@@ -244,7 +244,7 @@ try:
     x = input ("Step 6: Enter to send filter paper to assembly")
     filteration_unit_config()
     filteration_flask_config()
-    Filteration_flask_up(32)
+    Filteration_flask_up(10)
     Filteration_unit_up(850)
     time.sleep(1)
     solinoid_value_to_filteration()
