@@ -228,10 +228,14 @@ try:
     upper_suction_pump_on(25)
     time.sleep(3)
     suction_pipe_down(300)
+    upper_suction_pump_off()
+    time.sleep(1)
+    upper_suction_pump_on(100)
+    time.sleep(1)
+    upper_suction_pump_on(25)
     for i in range(100):
         suction_pipe_down(20)
-        suction_pump_up(20)
-    for i in range(100):
+        suction_pipe_up(20)
         suction_pump_up(10)
         suction_pump_down(10)
         time.sleep(0.01)
