@@ -185,7 +185,6 @@ signal.signal(signal.SIGTERM, _on_sigterm)
 atexit.register(shutdown_all)
 
 try:
-    x = input ('Enter to home all modules: ')
     x = input ('Enter to put media pad in trash: ')
     incubator_lid_home()
     petri_dishes_home()
@@ -397,11 +396,6 @@ try:
         suction_pump_down(120)
         time.sleep(0.01)
     time.sleep(2)
-
-
-
-
-
 
 
 except KeyboardInterrupt:
