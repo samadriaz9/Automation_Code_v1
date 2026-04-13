@@ -199,7 +199,7 @@ try:
     petri_dishes_home()
     time.sleep(2)
     suction_pump_home()
-    suction_pipe_up(400)
+    suction_pump_up(400)
     time.sleep(2)
 
  
