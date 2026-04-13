@@ -197,6 +197,7 @@ try:
     filteration_flask_config()
     time.sleep(2)
     petri_dishes_home()
+    petri_dishes_down(1035)
     time.sleep(2)
     suction_pump_home()
     suction_pump_up(400)
