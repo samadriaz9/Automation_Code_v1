@@ -227,8 +227,8 @@ try:
     suction_pipe_up(1010)
     upper_suction_pump_on(25)
     time.sleep(3)
-    suction_pipe_down(200)
-    for i in range(20):
+    suction_pipe_down(300)
+    for i in range(10):
         suction_pump_up(5)
         suction_pump_down(5)
         time.sleep(0.01)
