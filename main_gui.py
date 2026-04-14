@@ -11,6 +11,7 @@ Features:
 
 import atexit
 import gc
+import glob
 import signal
 import sys
 import time
@@ -35,7 +36,6 @@ from filteration_suction_pump import (
 from filteration_unit import Filteration_unit_up, filteration_unit_config, cleanup as filteration_unit_cleanup
 from imaging import start_imaging_capture_pattern
 from incubator_lid import incubator_lid_home, incubator_lid_up, cleanup as incubator_lid_cleanup
-from incubation_module import Start_incubation
 from media_dispensor import (
     Media_dispensor_home,
     Media_dispensor_up,
@@ -48,7 +48,7 @@ from petri_dishes import (
     petri_dishes_up,
     cleanup as petri_dishes_cleanup,
 )
-from relay_control import P1, P7, run_relay, cleanup as relay_cleanup
+from relay_control import P1, P7, run_relay, set_relay, cleanup as relay_cleanup
 from solinoid_value_drain import cleanup as drain_solenoid_cleanup
 from solinoid_value_to_filteration import (
     solinoid_value_to_filteration,
@@ -335,6 +335,7 @@ class ExperimentApp:
             pady=8,
         )
         self.log.grid(row=2, column=0, sticky="nsew")
+        self._incubation_stop_requested = False
 
     def _setup_styles(self):
         style = ttk.Style(self.root)
@@ -505,7 +506,7 @@ class ExperimentApp:
         frame.columnconfigure(0, weight=1)
         frame.columnconfigure(1, weight=1)
         frame.columnconfigure(2, weight=1)
-        ttk.Label(frame, text="Round", style="Status.TLabel").grid(row=0, column=0, sticky="w", padx=6, pady=(4, 10))
+        ttk.Label(frame, text="Stage", style="Status.TLabel").grid(row=0, column=0, sticky="w", padx=6, pady=(4, 10))
         ttk.Label(frame, text="Temperature (C)", style="Status.TLabel").grid(row=0, column=1, sticky="w", padx=6, pady=(4, 10))
         ttk.Label(frame, text="Time (min)", style="Status.TLabel").grid(row=0, column=2, sticky="w", padx=6, pady=(4, 10))
 
@@ -562,20 +563,20 @@ class ExperimentApp:
             return box
 
         for i in range(5):
-            round_no = i + 1
+            stage_no = i + 1
             t_var = tk.StringVar(value="37")
             m_var = tk.StringVar(value="1" if i == 0 else "0")
             temp_vars.append(t_var)
             time_vars.append(m_var)
 
-            ttk.Label(frame, text=f"Round {round_no}", style="Status.TLabel").grid(
-                row=round_no, column=0, sticky="w", padx=6, pady=8
+            ttk.Label(frame, text=f"Stage {stage_no}", style="Status.TLabel").grid(
+                row=stage_no, column=0, sticky="w", padx=6, pady=8
             )
-            _spinbox(frame, t_var, step=0.5, min_v=20.0, max_v=60.0, precision=1).grid(
-                row=round_no, column=1, sticky="w", padx=6, pady=8
+            _spinbox(frame, t_var, step=0.5, min_v=10.0, max_v=50.0, precision=1).grid(
+                row=stage_no, column=1, sticky="w", padx=6, pady=8
             )
-            _spinbox(frame, m_var, step=1, min_v=0, max_v=120, precision=0).grid(
-                row=round_no, column=2, sticky="w", padx=6, pady=8
+            _spinbox(frame, m_var, step=1, min_v=0, max_v=1440, precision=0).grid(
+                row=stage_no, column=2, sticky="w", padx=6, pady=8
             )
 
         def _start_flow():
@@ -608,11 +609,11 @@ class ExperimentApp:
         try:
             self.write_log("Running combined flow: Shift -> Incubate -> Picture")
             for idx, (target_temp, minutes) in enumerate(profiles, start=1):
-                self.write_log(f"Round {idx}: shift to incubation region")
+                self.write_log(f"Stage {idx}: shift to incubation region")
                 self.step_11()
-                self.write_log(f"Round {idx}: incubate at {target_temp:.1f}C for {minutes:.2f} min")
-                self._run_incubation(target_temp, minutes)
-                self.write_log(f"Round {idx}: incubation complete, starting pictures")
+                self.write_log(f"Stage {idx}: incubate at {target_temp:.1f}C for {minutes:.2f} min")
+                self._run_incubation(target_temp, minutes, stage_name=f"Stage {idx}")
+                self.write_log(f"Stage {idx}: incubation complete, starting pictures")
                 self.step_13()
             self.write_log("Final: returning incubator and stage home")
             incubator_lid_home()
@@ -773,10 +774,142 @@ class ExperimentApp:
     def step_12(self):
         self.write_log("Step 12: Start incubation")
         run_relay(P1, 1)
-        self._run_incubation(37, 1)
+        self._run_incubation(37, 1, stage_name="Step 12")
 
-    def _run_incubation(self, target_temp, minutes):
-        Start_incubation(float(target_temp), float(minutes))
+    def _read_ds18b20_c(self, sensor_glob="/sys/bus/w1/devices/28-*/w1_slave"):
+        paths = glob.glob(sensor_glob)
+        if not paths:
+            raise RuntimeError("DS18B20 sensor not found")
+        with open(paths[0], "r", encoding="utf-8") as f:
+            lines = f.read().strip().splitlines()
+        if len(lines) < 2 or not lines[0].strip().endswith("YES"):
+            raise RuntimeError("DS18B20 CRC invalid")
+        marker = "t="
+        if marker not in lines[1]:
+            raise RuntimeError("DS18B20 data missing")
+        return int(lines[1].split(marker, 1)[1]) / 1000.0
+
+    def _draw_pie(self, canvas, center_x, center_y, radius, frac, color, bg):
+        canvas.create_oval(
+            center_x - radius,
+            center_y - radius,
+            center_x + radius,
+            center_y + radius,
+            fill=bg,
+            outline="",
+        )
+        canvas.create_arc(
+            center_x - radius,
+            center_y - radius,
+            center_x + radius,
+            center_y + radius,
+            start=90,
+            extent=-360.0 * max(0.0, min(1.0, float(frac))),
+            fill=color,
+            outline="",
+        )
+
+    def _run_incubation(self, target_temp, minutes, stage_name="Incubation"):
+        target_temp = float(target_temp)
+        duration_s = max(0.0, float(minutes) * 60.0)
+        lower = target_temp - 0.3
+        upper = target_temp + 0.3
+        poll_seconds = 1.0
+
+        win = tk.Toplevel(self.root)
+        win.title(f"{stage_name} Monitor")
+        win.geometry("900x520")
+        win.minsize(860, 480)
+        win.transient(self.root)
+
+        root_frame = ttk.Frame(win, padding=10, style="App.TFrame")
+        root_frame.pack(fill=tk.BOTH, expand=True)
+        root_frame.columnconfigure(0, weight=1)
+        root_frame.columnconfigure(1, weight=1)
+
+        stage_var = tk.StringVar(value=f"{stage_name} incubation")
+        temp_var = tk.StringVar(value="--.- C")
+        rem_var = tk.StringVar(value="--:--:--")
+        target_var = tk.StringVar(value=f"Target {target_temp:.1f} C")
+
+        ttk.Label(root_frame, textvariable=stage_var, style="Title.TLabel").grid(
+            row=0, column=0, columnspan=2, sticky="w", pady=(0, 8)
+        )
+        ttk.Label(root_frame, textvariable=target_var, style="Status.TLabel").grid(
+            row=1, column=0, columnspan=2, sticky="w", pady=(0, 8)
+        )
+
+        temp_canvas = tk.Canvas(root_frame, width=360, height=320, bg="#F3F6FB", highlightthickness=0)
+        time_canvas = tk.Canvas(root_frame, width=360, height=320, bg="#F3F6FB", highlightthickness=0)
+        temp_canvas.grid(row=2, column=0, padx=6, pady=6, sticky="nsew")
+        time_canvas.grid(row=2, column=1, padx=6, pady=6, sticky="nsew")
+
+        temp_label = ttk.Label(root_frame, textvariable=temp_var, style="Status.TLabel")
+        rem_label = ttk.Label(root_frame, textvariable=rem_var, style="Status.TLabel")
+        temp_label.grid(row=3, column=0, pady=(2, 8))
+        rem_label.grid(row=3, column=1, pady=(2, 8))
+
+        self._incubation_stop_requested = False
+
+        def _request_stop():
+            self._incubation_stop_requested = True
+
+        stop_btn = ttk.Button(root_frame, text="Stop", style="ActionOrange.TButton", command=_request_stop)
+        stop_btn.grid(row=4, column=0, columnspan=2, sticky="ew", padx=8, pady=(4, 0))
+
+        start = time.time()
+        heater_on = False
+        last_temp = None
+        try:
+            while True:
+                elapsed = time.time() - start
+                if elapsed >= duration_s:
+                    break
+                if self._incubation_stop_requested:
+                    raise RuntimeError(f"{stage_name} stopped by user")
+
+                temp_c = self._read_ds18b20_c()
+                last_temp = temp_c
+                if temp_c <= lower and not heater_on:
+                    set_relay(P1, True)
+                    heater_on = True
+                elif temp_c >= upper and heater_on:
+                    set_relay(P1, False)
+                    heater_on = False
+
+                remain = max(0.0, duration_s - elapsed)
+                h = int(remain // 3600)
+                m = int((remain % 3600) // 60)
+                s = int(remain % 60)
+                rem_var.set(f"{h:02d}:{m:02d}:{s:02d}")
+                temp_var.set(f"{temp_c:.2f} C")
+
+                temp_frac = (temp_c - 10.0) / 40.0
+                time_frac = remain / duration_s if duration_s > 0 else 0.0
+
+                temp_canvas.delete("all")
+                time_canvas.delete("all")
+                self._draw_pie(temp_canvas, 180, 160, 120, temp_frac, "#0C9E5E", "#DCE7F8")
+                self._draw_pie(time_canvas, 180, 160, 120, time_frac, "#1662D4", "#DCE7F8")
+                temp_canvas.create_text(180, 160, text="Temp", fill="#10253F", font=("TkDefaultFont", 16, "bold"))
+                time_canvas.create_text(180, 160, text="Time Left", fill="#10253F", font=("TkDefaultFont", 16, "bold"))
+                temp_canvas.create_text(180, 280, text=f"{temp_c:.1f} / 50.0 C", fill="#10253F", font=("TkDefaultFont", 12))
+                time_canvas.create_text(180, 280, text=rem_var.get(), fill="#10253F", font=("TkDefaultFont", 12))
+
+                win.update_idletasks()
+                win.update()
+                time.sleep(poll_seconds)
+
+            self.write_log(f"{stage_name}: completed at {last_temp:.2f}C" if last_temp is not None else f"{stage_name}: completed")
+        finally:
+            try:
+                set_relay(P1, False)
+            except Exception:
+                pass
+            try:
+                win.destroy()
+            except Exception:
+                pass
 
     def _detect_camera_index(self, candidates=(0, 1, 2, 3)):
         """Return first currently openable USB camera index, else None."""
