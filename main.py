@@ -134,6 +134,41 @@ _shutdown_done = False
 _usb_camera_worker = None
 
 
+def _open_usb_camera(device_index=0):
+    """Open USB camera with Linux V4L2 backend to avoid GStreamer instability."""
+    idx = int(device_index)
+    if sys.platform.startswith("linux"):
+        cap = cv2.VideoCapture(idx, cv2.CAP_V4L2)
+    else:
+        cap = cv2.VideoCapture(idx)
+    if not cap.isOpened():
+        return None
+    try:
+        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+    except Exception:
+        pass
+    return cap
+
+
+def _camera_ready(device_index=0, tries=10, wait_s=0.1):
+    """Best-effort camera readiness check with guaranteed release."""
+    cap = _open_usb_camera(device_index=device_index)
+    if cap is None:
+        return False
+    try:
+        for _ in range(max(1, int(tries))):
+            ok, frame = cap.read()
+            if ok and frame is not None:
+                return True
+            time.sleep(float(wait_s))
+        return False
+    finally:
+        try:
+            cap.release()
+        except Exception:
+            pass
+
+
 def shutdown_all():
     """Idempotent full cleanup. Call on exit, Ctrl+C, or SIGTERM."""
     global _shutdown_done
@@ -188,9 +223,7 @@ try:
     x  = input ("Step 13: Enter to start pictures")
     
     try:
-        cap = cv2.VideoCapture(0)
-        ok, frame = cap.read()
-        ok, frame = cap.read()
+        ok = _camera_ready(device_index=0, tries=2, wait_s=0.05)
         if ok:
             print("camera on")
         else:
@@ -207,14 +240,15 @@ try:
     petri_dishes_home()
     petri_dishes_down(3290)
     petri_dishes_up(330)
-    cap = cv2.VideoCapture(0)
+    ok = False
     for i in range(10):
-        ok, frame = cap.read()
-        if ok:
+        if _camera_ready(device_index=0, tries=1, wait_s=0.05):
             print("camera on")
+            ok = True
             break
         else:
             print("camera off")
+            time.sleep(0.1)
     if ok:
         print("Starting imaging capture pattern")
         start_imaging_capture_pattern()
@@ -368,9 +402,7 @@ try:
     x  = input ("Step 13: Enter to start pictures")
     
     try:
-        cap = cv2.VideoCapture(0)
-        ok, frame = cap.read()
-        ok, frame = cap.read()
+        ok = _camera_ready(device_index=0, tries=2, wait_s=0.05)
         if ok:
             print("camera on")
         else:
@@ -387,14 +419,15 @@ try:
     petri_dishes_home()
     petri_dishes_down(3290)
     petri_dishes_up(330)
-    cap = cv2.VideoCapture(0)
+    ok = False
     for i in range(10):
-        ok, frame = cap.read()
-        if ok:
+        if _camera_ready(device_index=0, tries=1, wait_s=0.05):
             print("camera on")
+            ok = True
             break
         else:
             print("camera off")
+            time.sleep(0.1)
     if ok:
         print("Starting imaging capture pattern")
         start_imaging_capture_pattern()
