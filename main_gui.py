@@ -393,6 +393,13 @@ class ExperimentApp:
             c = idx % 3
             btn.grid(row=r, column=c, sticky="ew", padx=6, pady=6)
 
+        combo_btn = ttk.Button(
+            wrapper,
+            text="Incubate + Pictures",
+            command=self.run_incubate_and_picture_flow,
+        )
+        combo_btn.grid(row=5, column=0, columnspan=3, sticky="ew", padx=6, pady=(12, 6))
+
     def run_specific_step(self, step_no):
         if self.is_busy:
             return
@@ -400,6 +407,25 @@ class ExperimentApp:
             return
         self.set_busy(True, f"Running step {step_no}/15...")
         self.root.after(10, lambda: self._run_specific_step_worker(step_no))
+
+    def run_incubate_and_picture_flow(self):
+        if self.is_busy:
+            return
+        self.set_busy(True, "Running Shift + Incubation + Pictures...")
+        self.root.after(10, self._run_incubate_and_picture_worker)
+
+    def _run_incubate_and_picture_worker(self):
+        try:
+            self.ensure_initialized()
+            self.write_log("Running combined flow: Shift Incubation -> Start Incubation -> Start Pictures")
+            self.step_11()
+            self.step_12()
+            self.step_13()
+            self.write_log("Combined flow complete")
+            self.root.after(0, lambda: self.set_busy(False, "Ready. Combined incubation+pictures completed."))
+        except Exception as exc:
+            self.write_log(f"ERROR: {exc}")
+            self.root.after(0, lambda: self.set_busy(False, "Error occurred in combined flow."))
 
     def _run_specific_step_worker(self, step_no):
         try:
@@ -564,6 +590,8 @@ class ExperimentApp:
         )
         if cap is None:
             raise RuntimeError("Camera not available for imaging")
+        # Let camera stream stabilize before imaging sequence.
+        time.sleep(3)
         cap.release()
 
         Camera_home()
