@@ -322,10 +322,24 @@ class ExperimentApp:
                 self.write_log(
                     f"{label}: GPIO not allocated (try {attempt}/{attempts}), reinitializing GPIO"
                 )
-                try:
-                    GPIO.cleanup()
-                except Exception:
-                    pass
+                # Do not call GPIO.cleanup() here: it can desync module-level
+                # "_initialized" flags from real GPIO state and cause repeated failures.
+                for reset_fn in (
+                    media_dispensor_cleanup,
+                    incubator_lid_cleanup,
+                    suction_pipe_cleanup,
+                    filteration_unit_cleanup,
+                    filteration_cleanup,
+                    petri_dishes_cleanup,
+                    suction_lift_cleanup,
+                    camera_cleanup,
+                    filteration_suction_cleanup,
+                    suction_cleanup,
+                ):
+                    try:
+                        reset_fn()
+                    except Exception:
+                        pass
                 _bootstrap_gpio()
                 time.sleep(0.25)
 
