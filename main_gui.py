@@ -308,17 +308,26 @@ class ExperimentApp:
         self.log.grid(row=2, column=0, sticky="nsew")
 
     def _run_with_gpio_retry(self, label, fn, *args, **kwargs):
-        """Retry once if GPIO allocation state is transiently invalid."""
-        try:
-            return fn(*args, **kwargs)
-        except Exception as exc:
-            msg = str(exc)
-            if "GPIO not allocated" not in msg:
-                raise
-            self.write_log(f"{label}: GPIO not allocated, retrying after GPIO bootstrap")
-            _bootstrap_gpio()
-            time.sleep(0.1)
-            return fn(*args, **kwargs)
+        """Retry several times if GPIO allocation state is transiently invalid."""
+        attempts = 4
+        for attempt in range(1, attempts + 1):
+            try:
+                return fn(*args, **kwargs)
+            except Exception as exc:
+                msg = str(exc)
+                if "GPIO not allocated" not in msg:
+                    raise
+                if attempt >= attempts:
+                    raise
+                self.write_log(
+                    f"{label}: GPIO not allocated (try {attempt}/{attempts}), reinitializing GPIO"
+                )
+                try:
+                    GPIO.cleanup()
+                except Exception:
+                    pass
+                _bootstrap_gpio()
+                time.sleep(0.25)
 
     def _initial_geometry(self):
         sw = self.root.winfo_screenwidth()
