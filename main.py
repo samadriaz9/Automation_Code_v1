@@ -220,64 +220,8 @@ signal.signal(signal.SIGTERM, _on_sigterm)
 atexit.register(shutdown_all)
 
 try:
-    x  = input ("Step 13: Enter to start pictures")
-    
-    try:
-        ok = _camera_ready(device_index=0, tries=2, wait_s=0.05)
-        if ok:
-            print("camera on")
-        else:
-            run_relay(P7, 3)
-            time.sleep(3)
-            print("camera switched on")
-    except Exception as e:
-        print(f"Camera not found")
-        sys.exit(1)
 
-    Camera_home()
-    Camera_down(2430)
-    incubator_lid_home()
-    petri_dishes_home()
-    petri_dishes_down(3290)
-    petri_dishes_up(330)
-    ok = False
-    for i in range(10):
-        if _camera_ready(device_index=0, tries=1, wait_s=0.05):
-            print("camera on")
-            ok = True
-            break
-        else:
-            print("camera off")
-            time.sleep(0.1)
-    if ok:
-        print("Starting imaging capture pattern")
-        start_imaging_capture_pattern()
-        time.sleep(0.5)
-        print("Imaging capture pattern completed")
-    else:
-        print("camera not on")
-    print("Moving petri dishes home")
-    petri_dishes_home()
-    print("Moving petri dishes down")
-    petri_dishes_down(3290)
-    print("Moving incubator lid up")
-    incubator_lid_up(200)
-    run_relay(P7, 3)
-    print("camera off")
-    time.sleep(3)
-
-
-
-
-
-
-
-
-
-
-
-
-    x = input ('Enter TO START MACHINE : ')
+    x = input ('Enter to bring all home : ')
     Media_dispensor_home()
     time.sleep(2)
     incubator_lid_home()
@@ -400,7 +344,6 @@ try:
     Start_incubation(37, 1)
 
     x  = input ("Step 13: Enter to start pictures")
-    
     try:
         ok = _camera_ready(device_index=0, tries=2, wait_s=0.05)
         if ok:
@@ -412,7 +355,6 @@ try:
     except Exception as e:
         print(f"Camera not found")
         sys.exit(1)
-
     Camera_home()
     Camera_down(2430)
     incubator_lid_home()
@@ -435,14 +377,10 @@ try:
         print("Imaging capture pattern completed")
     else:
         print("camera not on")
-    print("Moving petri dishes home")
     petri_dishes_home()
-    print("Moving petri dishes down")
     petri_dishes_down(3290)
-    print("Moving incubator lid up")
     incubator_lid_up(200)
     run_relay(P7, 3)
-    print("camera off")
     time.sleep(3)
 
 
