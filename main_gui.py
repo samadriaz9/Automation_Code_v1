@@ -13,7 +13,6 @@ import atexit
 import gc
 import signal
 import sys
-import threading
 import time
 import tkinter as tk
 from tkinter import messagebox, ttk
@@ -391,7 +390,7 @@ class ExperimentApp:
         if step_no < 1 or step_no > 15:
             return
         self.set_busy(True, f"Running step {step_no}/15...")
-        threading.Thread(target=self._run_specific_step_worker, args=(step_no,), daemon=True).start()
+        self.root.after(10, lambda: self._run_specific_step_worker(step_no))
 
     def _run_specific_step_worker(self, step_no):
         try:
@@ -408,7 +407,7 @@ class ExperimentApp:
         if self.is_busy:
             return
         self.set_busy(True, "Running full experiment (15 steps)...")
-        threading.Thread(target=self._run_all_worker, daemon=True).start()
+        self.root.after(10, self._run_all_worker)
 
     def _run_all_worker(self):
         try:
