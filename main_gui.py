@@ -234,9 +234,10 @@ class ExperimentApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Automation Device Controller")
-        self.root.minsize(700, 500)
+        self.root.minsize(960, 560)
         self.root.geometry(self._initial_geometry())
         self.root.protocol("WM_DELETE_WINDOW", self.on_exit)
+        self._setup_styles()
 
         self.is_busy = False
         self.initialized = False
@@ -276,7 +277,7 @@ class ExperimentApp:
             "Sterilize",
         ]
 
-        outer = ttk.Frame(root, padding=12)
+        outer = ttk.Frame(root, padding=10, style="App.TFrame")
         outer.pack(fill=tk.BOTH, expand=True)
         outer.columnconfigure(0, weight=1)
         outer.rowconfigure(2, weight=1)
@@ -284,28 +285,94 @@ class ExperimentApp:
         ttk.Label(
             outer,
             text="Automation Device - Main GUI",
-            font=("TkDefaultFont", 14, "bold"),
-        ).grid(row=0, column=0, sticky="w", pady=(0, 10))
+            style="Title.TLabel",
+        ).grid(row=0, column=0, sticky="w", pady=(0, 8))
 
-        btn_row = ttk.Frame(outer)
+        btn_row = ttk.Frame(outer, style="App.TFrame")
         btn_row.grid(row=1, column=0, sticky="ew", pady=(0, 10))
         for i in range(3):
             btn_row.columnconfigure(i, weight=1)
 
-        self.btn_step = ttk.Button(btn_row, text="Run Experiment Steps", command=self.open_step_popup)
+        self.btn_step = ttk.Button(
+            btn_row,
+            text="Run Experiment Steps",
+            command=self.open_step_popup,
+            style="ActionBlue.TButton",
+        )
         self.btn_step.grid(row=0, column=0, sticky="ew", padx=(0, 8))
 
-        self.btn_all = ttk.Button(btn_row, text="Run Experiment", command=self.run_all_steps)
+        self.btn_all = ttk.Button(
+            btn_row,
+            text="Run Experiment",
+            command=self.run_all_steps,
+            style="ActionGreen.TButton",
+        )
         self.btn_all.grid(row=0, column=1, sticky="ew", padx=4)
 
-        self.btn_camera = ttk.Button(btn_row, text="Test Camera", command=self.open_camera_test)
+        self.btn_camera = ttk.Button(
+            btn_row,
+            text="Test Camera",
+            command=self.open_camera_test,
+            style="ActionOrange.TButton",
+        )
         self.btn_camera.grid(row=0, column=2, sticky="ew", padx=(8, 0))
 
         self.status_var = tk.StringVar(value="Ready.")
-        ttk.Label(outer, textvariable=self.status_var).grid(row=3, column=0, sticky="w", pady=(8, 0))
+        ttk.Label(outer, textvariable=self.status_var, style="Status.TLabel").grid(
+            row=3, column=0, sticky="w", pady=(6, 0)
+        )
 
-        self.log = tk.Text(outer, wrap=tk.WORD, height=18)
+        self.log = tk.Text(
+            outer,
+            wrap=tk.WORD,
+            height=16,
+            font=("TkDefaultFont", 11),
+            bg="#101826",
+            fg="#E9F0FF",
+            insertbackground="#E9F0FF",
+            relief=tk.FLAT,
+            padx=8,
+            pady=8,
+        )
         self.log.grid(row=2, column=0, sticky="nsew")
+
+    def _setup_styles(self):
+        style = ttk.Style(self.root)
+        try:
+            style.theme_use("clam")
+        except Exception:
+            pass
+        style.configure("App.TFrame", background="#F3F6FB")
+        style.configure("Title.TLabel", background="#F3F6FB", foreground="#16243A", font=("TkDefaultFont", 16, "bold"))
+        style.configure("Status.TLabel", background="#F3F6FB", foreground="#233A5A", font=("TkDefaultFont", 11, "bold"))
+        style.configure(
+            "ActionBlue.TButton",
+            font=("TkDefaultFont", 12, "bold"),
+            padding=(10, 14),
+            foreground="white",
+            background="#1662D4",
+            borderwidth=0,
+        )
+        style.map("ActionBlue.TButton", background=[("active", "#0F56BF")])
+        style.configure(
+            "ActionGreen.TButton",
+            font=("TkDefaultFont", 12, "bold"),
+            padding=(10, 14),
+            foreground="white",
+            background="#0C9E5E",
+            borderwidth=0,
+        )
+        style.map("ActionGreen.TButton", background=[("active", "#09874F")])
+        style.configure(
+            "ActionOrange.TButton",
+            font=("TkDefaultFont", 12, "bold"),
+            padding=(10, 14),
+            foreground="white",
+            background="#D46A09",
+            borderwidth=0,
+        )
+        style.map("ActionOrange.TButton", background=[("active", "#B45705")])
+        style.configure("StepPopup.TButton", font=("TkDefaultFont", 11, "bold"), padding=(8, 10))
 
     def _run_with_gpio_retry(self, label, fn, *args, **kwargs):
         """Retry several times if GPIO allocation state is transiently invalid."""
@@ -346,10 +413,10 @@ class ExperimentApp:
     def _initial_geometry(self):
         sw = self.root.winfo_screenwidth()
         sh = self.root.winfo_screenheight()
-        w = int(sw * 0.75)
-        h = int(sh * 0.75)
+        w = min(sw, 1028)
+        h = min(sh, 600)
         x = max(0, (sw - w) // 2)
-        y = max(0, (sh - h) // 3)
+        y = max(0, (sh - h) // 2)
         return f"{w}x{h}+{x}+{y}"
 
     def set_busy(self, busy, status_text):
@@ -386,8 +453,8 @@ class ExperimentApp:
             return
         popup = tk.Toplevel(self.root)
         popup.title("Run Experiment Steps")
-        popup.geometry("700x420")
-        popup.minsize(540, 320)
+        popup.geometry("980x560")
+        popup.minsize(900, 520)
         popup.transient(self.root)
 
         wrapper = ttk.Frame(popup, padding=10)
@@ -402,6 +469,7 @@ class ExperimentApp:
                 wrapper,
                 text=label,
                 command=lambda n=step_no: self.run_specific_step(n),
+                style="StepPopup.TButton",
             )
             r = idx // 3
             c = idx % 3
@@ -411,6 +479,7 @@ class ExperimentApp:
             wrapper,
             text="Incubate + Pictures",
             command=self.run_incubate_and_picture_flow,
+            style="ActionBlue.TButton",
         )
         combo_btn.grid(row=5, column=0, columnspan=3, sticky="ew", padx=6, pady=(12, 6))
 
@@ -427,65 +496,127 @@ class ExperimentApp:
             return
         popup = tk.Toplevel(self.root)
         popup.title("Incubation Profile Setup")
-        popup.geometry("520x300")
-        popup.minsize(420, 260)
+        popup.geometry("980x560")
+        popup.minsize(900, 520)
         popup.transient(self.root)
 
-        frame = ttk.Frame(popup, padding=12)
+        frame = ttk.Frame(popup, padding=12, style="App.TFrame")
         frame.pack(fill=tk.BOTH, expand=True)
         frame.columnconfigure(0, weight=1)
         frame.columnconfigure(1, weight=1)
+        frame.columnconfigure(2, weight=1)
+        ttk.Label(frame, text="Round", style="Status.TLabel").grid(row=0, column=0, sticky="w", padx=6, pady=(4, 10))
+        ttk.Label(frame, text="Temperature (C)", style="Status.TLabel").grid(row=0, column=1, sticky="w", padx=6, pady=(4, 10))
+        ttk.Label(frame, text="Time (min)", style="Status.TLabel").grid(row=0, column=2, sticky="w", padx=6, pady=(4, 10))
 
-        ttk.Label(frame, text="Temperature 1 (C)").grid(row=0, column=0, sticky="w", pady=4, padx=4)
-        temp1_var = tk.StringVar(value="37")
-        ttk.Entry(frame, textvariable=temp1_var).grid(row=0, column=1, sticky="ew", pady=4, padx=4)
+        temp_vars = []
+        time_vars = []
 
-        ttk.Label(frame, text="Time 1 (minutes)").grid(row=1, column=0, sticky="w", pady=4, padx=4)
-        time1_var = tk.StringVar(value="1")
-        ttk.Entry(frame, textvariable=time1_var).grid(row=1, column=1, sticky="ew", pady=4, padx=4)
+        def _spinbox(parent, var, step, min_v, max_v, precision):
+            box = ttk.Frame(parent, style="App.TFrame")
+            box.columnconfigure(1, weight=1)
 
-        ttk.Label(frame, text="Temperature 2 (C)").grid(row=2, column=0, sticky="w", pady=4, padx=4)
-        temp2_var = tk.StringVar(value="40")
-        ttk.Entry(frame, textvariable=temp2_var).grid(row=2, column=1, sticky="ew", pady=4, padx=4)
+            def _adjust(delta):
+                try:
+                    value = float(var.get())
+                except Exception:
+                    value = float(min_v)
+                value = max(float(min_v), min(float(max_v), value + delta))
+                var.set(f"{value:.{precision}f}" if precision > 0 else f"{int(round(value))}")
 
-        ttk.Label(frame, text="Time 2 (minutes)").grid(row=3, column=0, sticky="w", pady=4, padx=4)
-        time2_var = tk.StringVar(value="2")
-        ttk.Entry(frame, textvariable=time2_var).grid(row=3, column=1, sticky="ew", pady=4, padx=4)
+            minus_btn = tk.Button(
+                box,
+                text="-",
+                width=3,
+                bg="#D85151",
+                fg="white",
+                activebackground="#C44141",
+                font=("TkDefaultFont", 13, "bold"),
+                command=lambda: _adjust(-step),
+            )
+            minus_btn.grid(row=0, column=0, padx=(0, 6))
+
+            value_lbl = tk.Label(
+                box,
+                textvariable=var,
+                width=7,
+                bg="#E8EEF8",
+                fg="#1B2F4A",
+                relief=tk.RIDGE,
+                bd=2,
+                font=("TkDefaultFont", 13, "bold"),
+            )
+            value_lbl.grid(row=0, column=1, sticky="ew")
+
+            plus_btn = tk.Button(
+                box,
+                text="+",
+                width=3,
+                bg="#1C8E56",
+                fg="white",
+                activebackground="#187A4A",
+                font=("TkDefaultFont", 13, "bold"),
+                command=lambda: _adjust(step),
+            )
+            plus_btn.grid(row=0, column=2, padx=(6, 0))
+            return box
+
+        for i in range(5):
+            round_no = i + 1
+            t_var = tk.StringVar(value="37")
+            m_var = tk.StringVar(value="1" if i == 0 else "0")
+            temp_vars.append(t_var)
+            time_vars.append(m_var)
+
+            ttk.Label(frame, text=f"Round {round_no}", style="Status.TLabel").grid(
+                row=round_no, column=0, sticky="w", padx=6, pady=8
+            )
+            _spinbox(frame, t_var, step=0.5, min_v=20.0, max_v=60.0, precision=1).grid(
+                row=round_no, column=1, sticky="w", padx=6, pady=8
+            )
+            _spinbox(frame, m_var, step=1, min_v=0, max_v=120, precision=0).grid(
+                row=round_no, column=2, sticky="w", padx=6, pady=8
+            )
 
         def _start_flow():
             try:
-                t1 = float(temp1_var.get().strip())
-                m1 = float(time1_var.get().strip())
-                t2 = float(temp2_var.get().strip())
-                m2 = float(time2_var.get().strip())
+                profiles = []
+                for t_var, m_var in zip(temp_vars, time_vars):
+                    temp = float(t_var.get().strip())
+                    mins = float(m_var.get().strip())
+                    if mins > 0:
+                        profiles.append((temp, mins))
             except Exception:
                 messagebox.showerror("Input Error", "Please enter valid numbers for temperatures and times.")
                 return
-            if m1 <= 0 or m2 <= 0:
-                messagebox.showerror("Input Error", "Time values must be greater than 0.")
+            if not profiles:
+                messagebox.showerror("Input Error", "Set at least one round with time > 0.")
                 return
 
             popup.destroy()
             self.set_busy(True, "Running incubation profile + picture capture...")
-            self.root.after(10, lambda: self._run_incubate_and_picture_worker((t1, m1), (t2, m2)))
+            self.root.after(10, lambda: self._run_incubate_and_picture_worker(profiles))
 
-        ttk.Button(frame, text="Start", command=_start_flow).grid(
-            row=4, column=0, sticky="ew", pady=(14, 4), padx=4
+        ttk.Button(frame, text="Start", style="ActionGreen.TButton", command=_start_flow).grid(
+            row=6, column=1, sticky="ew", pady=(16, 4), padx=6
         )
-        ttk.Button(frame, text="Cancel", command=popup.destroy).grid(
-            row=4, column=1, sticky="ew", pady=(14, 4), padx=4
+        ttk.Button(frame, text="Cancel", style="ActionOrange.TButton", command=popup.destroy).grid(
+            row=6, column=2, sticky="ew", pady=(16, 4), padx=6
         )
 
-    def _run_incubate_and_picture_worker(self, profile_1, profile_2):
+    def _run_incubate_and_picture_worker(self, profiles):
         try:
-            self.write_log("Running combined flow: Shift -> Incubate -> Picture (two rounds)")
-            for idx, (target_temp, minutes) in enumerate((profile_1, profile_2), start=1):
+            self.write_log("Running combined flow: Shift -> Incubate -> Picture")
+            for idx, (target_temp, minutes) in enumerate(profiles, start=1):
                 self.write_log(f"Round {idx}: shift to incubation region")
                 self.step_11()
                 self.write_log(f"Round {idx}: incubate at {target_temp:.1f}C for {minutes:.2f} min")
                 self._run_incubation(target_temp, minutes)
                 self.write_log(f"Round {idx}: incubation complete, starting pictures")
                 self.step_13()
+            self.write_log("Final: returning incubator and stage home")
+            incubator_lid_home()
+            petri_dishes_home()
             self.write_log("Combined flow complete")
             self.root.after(0, lambda: self.set_busy(False, "Ready. Combined incubation+pictures completed."))
         except Exception as exc:
@@ -707,11 +838,6 @@ class ExperimentApp:
 
 def main():
     root = tk.Tk()
-    style = ttk.Style()
-    try:
-        style.theme_use("clam")
-    except Exception:
-        pass
     ExperimentApp(root)
     root.mainloop()
 
