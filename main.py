@@ -223,21 +223,14 @@ try:
 
     x = input ('Enter to bring all home : ')
     Media_dispensor_home()
-    time.sleep(2)
     incubator_lid_home()
-    time.sleep(2)
     suction_pipe_home()
-    time.sleep(2)
     filteration_unit_config()
-    time.sleep(2)
     filteration_flask_config()
-    time.sleep(2)
     petri_dishes_home()
     petri_dishes_down(1035)
-    time.sleep(2)
     suction_pump_home()
     suction_pump_up(400)
-    time.sleep(2)
 
  
     x = input ('step 1: Enter to Empty Syringe: ')
@@ -322,7 +315,7 @@ try:
     x = input ("Step 10: Picking up filter paper from filteration flask")
     suction_pipe_home()
     suction_pump_home()
-    suction_pump_up(1255)
+    suction_pump_up(1265)
     suction_pipe_up(670)
     upper_suction_pump_on(30)
     time.sleep(3)
@@ -383,8 +376,7 @@ try:
     run_relay(P7, 3)
     time.sleep(3)
 
-
-    x = input ('Step 14: Enter to put filter paper in trash: ')
+    x = input ('Step 14: Enter to put in trash: ')
     incubator_lid_home()
     petri_dishes_home()
     petri_dishes_down(1025)
@@ -404,26 +396,7 @@ try:
         time.sleep(0.01)
     time.sleep(2)
 
-
-    x = input ('Step 15: Enter to put media pad in trash: ')
-    incubator_lid_home()
-    petri_dishes_home()
-    petri_dishes_down(1025)
-    suction_pipe_home()
-    suction_pump_home()
-    suction_pump_up(3055)
-    suction_pipe_up(1010)
-    upper_suction_pump_on(100)
-    time.sleep(2)
-    suction_pipe_home()
-    suction_pump_down(930)
-    upper_suction_pump_off()
-    suction_pipe_up(800)
-    for i in range(20):
-        suction_pump_up(120)
-        suction_pump_down(120)
-        time.sleep(0.01)
-    time.sleep(2)
+    x = input ('Step 15: Enter to Steriliz: ')
 
 except KeyboardInterrupt:
     print("\nInterrupted (Ctrl+C).")
