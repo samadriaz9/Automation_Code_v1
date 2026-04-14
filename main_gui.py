@@ -425,16 +425,67 @@ class ExperimentApp:
     def run_incubate_and_picture_flow(self):
         if self.is_busy:
             return
-        self.set_busy(True, "Running Shift + Incubation + Pictures...")
-        self.root.after(10, self._run_incubate_and_picture_worker)
+        popup = tk.Toplevel(self.root)
+        popup.title("Incubation Profile Setup")
+        popup.geometry("520x300")
+        popup.minsize(420, 260)
+        popup.transient(self.root)
 
-    def _run_incubate_and_picture_worker(self):
+        frame = ttk.Frame(popup, padding=12)
+        frame.pack(fill=tk.BOTH, expand=True)
+        frame.columnconfigure(0, weight=1)
+        frame.columnconfigure(1, weight=1)
+
+        ttk.Label(frame, text="Temperature 1 (C)").grid(row=0, column=0, sticky="w", pady=4, padx=4)
+        temp1_var = tk.StringVar(value="37")
+        ttk.Entry(frame, textvariable=temp1_var).grid(row=0, column=1, sticky="ew", pady=4, padx=4)
+
+        ttk.Label(frame, text="Time 1 (minutes)").grid(row=1, column=0, sticky="w", pady=4, padx=4)
+        time1_var = tk.StringVar(value="1")
+        ttk.Entry(frame, textvariable=time1_var).grid(row=1, column=1, sticky="ew", pady=4, padx=4)
+
+        ttk.Label(frame, text="Temperature 2 (C)").grid(row=2, column=0, sticky="w", pady=4, padx=4)
+        temp2_var = tk.StringVar(value="40")
+        ttk.Entry(frame, textvariable=temp2_var).grid(row=2, column=1, sticky="ew", pady=4, padx=4)
+
+        ttk.Label(frame, text="Time 2 (minutes)").grid(row=3, column=0, sticky="w", pady=4, padx=4)
+        time2_var = tk.StringVar(value="2")
+        ttk.Entry(frame, textvariable=time2_var).grid(row=3, column=1, sticky="ew", pady=4, padx=4)
+
+        def _start_flow():
+            try:
+                t1 = float(temp1_var.get().strip())
+                m1 = float(time1_var.get().strip())
+                t2 = float(temp2_var.get().strip())
+                m2 = float(time2_var.get().strip())
+            except Exception:
+                messagebox.showerror("Input Error", "Please enter valid numbers for temperatures and times.")
+                return
+            if m1 <= 0 or m2 <= 0:
+                messagebox.showerror("Input Error", "Time values must be greater than 0.")
+                return
+
+            popup.destroy()
+            self.set_busy(True, "Running incubation profile + picture capture...")
+            self.root.after(10, lambda: self._run_incubate_and_picture_worker((t1, m1), (t2, m2)))
+
+        ttk.Button(frame, text="Start", command=_start_flow).grid(
+            row=4, column=0, sticky="ew", pady=(14, 4), padx=4
+        )
+        ttk.Button(frame, text="Cancel", command=popup.destroy).grid(
+            row=4, column=1, sticky="ew", pady=(14, 4), padx=4
+        )
+
+    def _run_incubate_and_picture_worker(self, profile_1, profile_2):
         try:
-            self.ensure_initialized()
-            self.write_log("Running combined flow: Shift Incubation -> Start Incubation -> Start Pictures")
-            self.step_11()
-            self.step_12()
-            self.step_13()
+            self.write_log("Running combined flow: Shift -> Incubate -> Picture (two rounds)")
+            for idx, (target_temp, minutes) in enumerate((profile_1, profile_2), start=1):
+                self.write_log(f"Round {idx}: shift to incubation region")
+                self.step_11()
+                self.write_log(f"Round {idx}: incubate at {target_temp:.1f}C for {minutes:.2f} min")
+                self._run_incubation(target_temp, minutes)
+                self.write_log(f"Round {idx}: incubation complete, starting pictures")
+                self.step_13()
             self.write_log("Combined flow complete")
             self.root.after(0, lambda: self.set_busy(False, "Ready. Combined incubation+pictures completed."))
         except Exception as exc:
@@ -591,7 +642,10 @@ class ExperimentApp:
     def step_12(self):
         self.write_log("Step 12: Start incubation")
         run_relay(P1, 1)
-        Start_incubation(37, 1)
+        self._run_incubation(37, 1)
+
+    def _run_incubation(self, target_temp, minutes):
+        Start_incubation(float(target_temp), float(minutes))
 
     def step_13(self):
         self.write_log("Step 13: Start pictures")
