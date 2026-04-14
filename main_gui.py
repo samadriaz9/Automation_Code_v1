@@ -778,20 +778,45 @@ class ExperimentApp:
     def _run_incubation(self, target_temp, minutes):
         Start_incubation(float(target_temp), float(minutes))
 
+    def _detect_camera_index(self, candidates=(0, 1, 2, 3)):
+        """Return first currently openable USB camera index, else None."""
+        for idx in candidates:
+            cap = open_usb_camera(idx)
+            if cap is None:
+                continue
+            try:
+                ok, frame = cap.read()
+                if ok and frame is not None:
+                    return int(idx)
+            finally:
+                try:
+                    cap.release()
+                except Exception:
+                    pass
+        return None
+
     def step_13(self):
         self.write_log("Step 13: Start pictures")
-        cap = open_usb_camera_with_recovery(
-            device_index=0,
-            direct_tries=3,
-            retry_wait_s=1.0,
-            post_relay_wait_s=4.0,
-            post_relay_tries=6,
-        )
-        if cap is None:
+        cam_idx = self._detect_camera_index()
+        if cam_idx is None:
+            # Recovery with relay on primary index, then probe again.
+            cap = open_usb_camera_with_recovery(
+                device_index=0,
+                direct_tries=3,
+                retry_wait_s=1.0,
+                post_relay_wait_s=4.0,
+                post_relay_tries=6,
+            )
+            if cap is not None:
+                cam_idx = 0
+                cap.release()
+            else:
+                cam_idx = self._detect_camera_index()
+        if cam_idx is None:
             raise RuntimeError("Camera not available for imaging")
+        self.write_log(f"Imaging camera index selected: /dev/video{cam_idx}")
         # Let camera stream stabilize before imaging sequence.
         time.sleep(3)
-        cap.release()
 
         Camera_home()
         Camera_down(2430)
@@ -799,7 +824,24 @@ class ExperimentApp:
         petri_dishes_home()
         petri_dishes_down(3290)
         petri_dishes_up(330)
-        start_imaging_capture_pattern()
+        imaging_ok = False
+        imaging_errors = []
+        for try_no in range(1, 4):
+            try:
+                start_imaging_capture_pattern(camera_device_index=cam_idx)
+                imaging_ok = True
+                break
+            except Exception as exc:
+                imaging_errors.append(str(exc))
+                self.write_log(f"Imaging attempt {try_no}/3 failed: {exc}")
+                # Device index can change after reconnect; probe before retry.
+                new_idx = self._detect_camera_index()
+                if new_idx is not None and new_idx != cam_idx:
+                    cam_idx = new_idx
+                    self.write_log(f"Switched imaging camera index to /dev/video{cam_idx}")
+                time.sleep(2)
+        if not imaging_ok:
+            raise RuntimeError(f"Imaging failed after retries: {imaging_errors[-1]}")
         time.sleep(0.5)
         petri_dishes_home()
         petri_dishes_down(3290)
