@@ -70,6 +70,18 @@ from upper_suction_pump import upper_suction_pump_on, upper_suction_pump_off, cl
 _shutdown_done = False
 
 
+def _bootstrap_gpio():
+    """Best-effort GPIO baseline for GUI-driven runs."""
+    try:
+        GPIO.setwarnings(False)
+    except Exception:
+        pass
+    try:
+        GPIO.setmode(GPIO.BCM)
+    except Exception:
+        pass
+
+
 def shutdown_all():
     global _shutdown_done
     if _shutdown_done:
@@ -247,6 +259,23 @@ class ExperimentApp:
             self.step_14,
             self.step_15,
         ]
+        self.step_labels = [
+            "Empty Syringe",
+            "Change Media",
+            "Adjust Syringe",
+            "Petri Home",
+            "Load Filter Paper",
+            "Send to Assembly",
+            "Pick Media Pad",
+            "Pour Media",
+            "Pick Filtration Unit",
+            "Pick Filter Paper",
+            "Shift Incubation",
+            "Start Incubation",
+            "Start Pictures",
+            "Trash Transfer",
+            "Sterilize",
+        ]
 
         outer = ttk.Frame(root, padding=12)
         outer.pack(fill=tk.BOTH, expand=True)
@@ -279,6 +308,19 @@ class ExperimentApp:
         self.log = tk.Text(outer, wrap=tk.WORD, height=18)
         self.log.grid(row=2, column=0, sticky="nsew")
 
+    def _run_with_gpio_retry(self, label, fn, *args, **kwargs):
+        """Retry once if GPIO allocation state is transiently invalid."""
+        try:
+            return fn(*args, **kwargs)
+        except Exception as exc:
+            msg = str(exc)
+            if "GPIO not allocated" not in msg:
+                raise
+            self.write_log(f"{label}: GPIO not allocated, retrying after GPIO bootstrap")
+            _bootstrap_gpio()
+            time.sleep(0.1)
+            return fn(*args, **kwargs)
+
     def _initial_geometry(self):
         sw = self.root.winfo_screenwidth()
         sh = self.root.winfo_screenheight()
@@ -305,15 +347,16 @@ class ExperimentApp:
         if self.initialized:
             return
         self.write_log("Initial setup: bring all modules to home/start position")
-        Media_dispensor_home()
-        incubator_lid_home()
-        suction_pipe_home()
-        filteration_unit_config()
-        filteration_flask_config()
-        petri_dishes_home()
-        petri_dishes_down(1035)
-        suction_pump_home()
-        suction_pump_up(400)
+        _bootstrap_gpio()
+        self._run_with_gpio_retry("Media dispensor home", Media_dispensor_home)
+        self._run_with_gpio_retry("Incubator lid home", incubator_lid_home)
+        self._run_with_gpio_retry("Suction pipe home", suction_pipe_home)
+        self._run_with_gpio_retry("Filteration unit config", filteration_unit_config)
+        self._run_with_gpio_retry("Filteration flask config", filteration_flask_config)
+        self._run_with_gpio_retry("Petri dishes home", petri_dishes_home)
+        self._run_with_gpio_retry("Petri dishes down", petri_dishes_down, 1035)
+        self._run_with_gpio_retry("Suction pump home", suction_pump_home)
+        self._run_with_gpio_retry("Suction pump up", suction_pump_up, 400)
         self.initialized = True
 
     def open_step_popup(self):
@@ -332,9 +375,10 @@ class ExperimentApp:
 
         for idx in range(15):
             step_no = idx + 1
+            label = self.step_labels[idx]
             btn = ttk.Button(
                 wrapper,
-                text=f"Step {step_no}",
+                text=label,
                 command=lambda n=step_no: self.run_specific_step(n),
             )
             r = idx // 3
