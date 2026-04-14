@@ -185,31 +185,59 @@ signal.signal(signal.SIGTERM, _on_sigterm)
 atexit.register(shutdown_all)
 
 try:
-    x = input ("step 5: Enter to put filter paper on filteration flask")
-    suction_pipe_home()
-    suction_pump_home()
-    filteration_unit_config()
-    filteration_flask_config()
-    Filteration_flask_up(1140)
-    suction_pipe_up(900)
-    upper_suction_pump_on(22)
-    time.sleep(2)
-    suction_pipe_down(600)
-    time.sleep(1)
-    # for i in range(100):
-    #     suction_pipe_down(20)
-    #     suction_pipe_up(20)
-    #     suction_pump_up(10)
-    #     suction_pump_down(10)
-    #     time.sleep(0.01)
-    time.sleep(1)
-    suction_pipe_home()
-    suction_pump_up(1245)
-    filteration_suction_pump_on(100)
-    upper_suction_pump_off()
-    suction_pipe_up(400)
-    time.sleep(2)
-    suction_pipe_home()
+    x  = input ("Step 13: Enter to start pictures")
+    
+    try:
+        cap = cv2.VideoCapture(0)
+        ok, frame = cap.read()
+        ok, frame = cap.read()
+        if ok:
+            print("camera on")
+        else:
+            run_relay(P7, 3)
+            time.sleep(3)
+            print("camera switched on")
+    except Exception as e:
+        print(f"Camera not found")
+        sys.exit(1)
+
+    Camera_home()
+    Camera_down(2430)
+    incubator_lid_home()
+    petri_dishes_home()
+    petri_dishes_down(3290)
+    petri_dishes_up(330)
+    cap = cv2.VideoCapture(0)
+    for i in range(10):
+        ok, frame = cap.read()
+        if ok:
+            print("camera on")
+            break
+        else:
+            print("camera off")
+    if ok:
+        print("Starting imaging capture pattern")
+        start_imaging_capture_pattern()
+        time.sleep(0.5)
+        print("Imaging capture pattern completed")
+    else:
+        print("camera not on")
+    print("Moving petri dishes home")
+    petri_dishes_home()
+    print("Moving petri dishes down")
+    petri_dishes_down(3290)
+    print("Moving incubator lid up")
+    incubator_lid_up(200)
+    run_relay(P7, 3)
+    print("camera off")
+    time.sleep(3)
+
+
+
+
+
+
+
 
 
 
@@ -254,28 +282,16 @@ try:
     filteration_unit_config()
     filteration_flask_config()
     Filteration_flask_up(1140)
-    suction_pipe_up(1000)
-    upper_suction_pump_on(100)
-    time.sleep(3)
-    suction_pipe_down(300)
+    suction_pipe_up(900)
+    upper_suction_pump_on(22)
+    time.sleep(2)
+    suction_pipe_down(600)
     time.sleep(1)
-    upper_suction_pump_off()
-    time.sleep(1)
-    upper_suction_pump_on(100)
-    time.sleep(1)
-    upper_suction_pump_on(15)
-    for i in range(100):
-        suction_pipe_down(20)
-        suction_pipe_up(20)
-        suction_pump_up(10)
-        suction_pump_down(10)
-        time.sleep(0.01)
-    time.sleep(1)
-    suction_pipe_down(1010)
+    suction_pipe_home()
     suction_pump_up(1245)
     filteration_suction_pump_on(100)
     upper_suction_pump_off()
-    suction_pipe_up(600)
+    suction_pipe_up(400)
     time.sleep(2)
     suction_pipe_home()
 
@@ -307,7 +323,7 @@ try:
     upper_suction_pump_on(100)
     time.sleep(2)
     suction_pipe_down(1025)
-    suction_pump_up(3055)
+    suction_pump_up(3065)
     suction_pipe_up(300)
     upper_suction_pump_off()
     
@@ -328,7 +344,7 @@ try:
     x = input ("Step 10: Picking up filter paper from filteration flask")
     suction_pipe_home()
     suction_pump_home()
-    suction_pump_up(1245)
+    suction_pump_up(1255)
     suction_pipe_up(670)
     upper_suction_pump_on(30)
     time.sleep(3)
