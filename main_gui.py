@@ -130,6 +130,35 @@ def open_usb_camera(device_index=0):
     return cap
 
 
+def open_usb_camera_with_recovery(
+    device_index=0,
+    direct_tries=3,
+    retry_wait_s=1.0,
+    post_relay_wait_s=4.0,
+    post_relay_tries=5,
+):
+    """
+    Try to open camera multiple times, then power-cycle via relay and retry.
+    Returns an opened capture or None.
+    """
+    for _ in range(max(1, int(direct_tries))):
+        cap = open_usb_camera(device_index)
+        if cap is not None:
+            return cap
+        time.sleep(float(retry_wait_s))
+
+    run_relay(P7, 3)
+    # Camera needs additional time after relay cycle to enumerate.
+    time.sleep(float(post_relay_wait_s))
+
+    for _ in range(max(1, int(post_relay_tries))):
+        cap = open_usb_camera(device_index)
+        if cap is not None:
+            return cap
+        time.sleep(float(retry_wait_s))
+    return None
+
+
 class CameraTestWindow:
     def __init__(self, parent):
         self.win = tk.Toplevel(parent)
@@ -144,11 +173,13 @@ class CameraTestWindow:
         self.preview.pack(fill=tk.BOTH, expand=True)
         ttk.Button(container, text="Close", command=self.on_close).pack(anchor=tk.E, pady=(8, 0))
 
-        self.cap = open_usb_camera(0)
-        if self.cap is None:
-            run_relay(P7, 3)
-            time.sleep(3)
-            self.cap = open_usb_camera(0)
+        self.cap = open_usb_camera_with_recovery(
+            device_index=0,
+            direct_tries=3,
+            retry_wait_s=1.0,
+            post_relay_wait_s=4.0,
+            post_relay_tries=6,
+        )
 
         if self.cap is None:
             messagebox.showerror("Camera", "Camera not available even after relay cycle.")
@@ -197,7 +228,6 @@ class ExperimentApp:
         self.root.protocol("WM_DELETE_WINDOW", self.on_exit)
 
         self.is_busy = False
-        self.current_step = 1
         self.initialized = False
 
         self.steps = [
@@ -234,7 +264,7 @@ class ExperimentApp:
         for i in range(3):
             btn_row.columnconfigure(i, weight=1)
 
-        self.btn_step = ttk.Button(btn_row, text="Run Experiment Steps", command=self.run_single_step)
+        self.btn_step = ttk.Button(btn_row, text="Run Experiment Steps", command=self.open_step_popup)
         self.btn_step.grid(row=0, column=0, sticky="ew", padx=(0, 8))
 
         self.btn_all = ttk.Button(btn_row, text="Run Experiment", command=self.run_all_steps)
@@ -243,7 +273,7 @@ class ExperimentApp:
         self.btn_camera = ttk.Button(btn_row, text="Test Camera", command=self.open_camera_test)
         self.btn_camera.grid(row=0, column=2, sticky="ew", padx=(8, 0))
 
-        self.status_var = tk.StringVar(value="Ready. Next step: 1/15")
+        self.status_var = tk.StringVar(value="Ready.")
         ttk.Label(outer, textvariable=self.status_var).grid(row=3, column=0, sticky="w", pady=(8, 0))
 
         self.log = tk.Text(outer, wrap=tk.WORD, height=18)
@@ -286,27 +316,46 @@ class ExperimentApp:
         suction_pump_up(400)
         self.initialized = True
 
-    def run_single_step(self):
+    def open_step_popup(self):
         if self.is_busy:
             return
-        if self.current_step > 15:
-            messagebox.showinfo("Experiment", "All 15 steps already completed.")
-            return
-        self.set_busy(True, f"Running step {self.current_step}/15...")
-        threading.Thread(target=self._run_single_step_worker, daemon=True).start()
+        popup = tk.Toplevel(self.root)
+        popup.title("Run Experiment Steps")
+        popup.geometry("700x420")
+        popup.minsize(540, 320)
+        popup.transient(self.root)
 
-    def _run_single_step_worker(self):
+        wrapper = ttk.Frame(popup, padding=10)
+        wrapper.pack(fill=tk.BOTH, expand=True)
+        for c in range(3):
+            wrapper.columnconfigure(c, weight=1)
+
+        for idx in range(15):
+            step_no = idx + 1
+            btn = ttk.Button(
+                wrapper,
+                text=f"Step {step_no}",
+                command=lambda n=step_no: self.run_specific_step(n),
+            )
+            r = idx // 3
+            c = idx % 3
+            btn.grid(row=r, column=c, sticky="ew", padx=6, pady=6)
+
+    def run_specific_step(self, step_no):
+        if self.is_busy:
+            return
+        if step_no < 1 or step_no > 15:
+            return
+        self.set_busy(True, f"Running step {step_no}/15...")
+        threading.Thread(target=self._run_specific_step_worker, args=(step_no,), daemon=True).start()
+
+    def _run_specific_step_worker(self, step_no):
         try:
             self.ensure_initialized()
-            step_fn = self.steps[self.current_step - 1]
+            step_fn = self.steps[int(step_no) - 1]
             step_fn()
-            self.write_log(f"Step {self.current_step} complete")
-            self.current_step += 1
-            if self.current_step <= 15:
-                next_text = f"Ready. Next step: {self.current_step}/15"
-            else:
-                next_text = "Ready. Experiment steps completed (15/15)"
-            self.root.after(0, lambda: self.set_busy(False, next_text))
+            self.write_log(f"Step {step_no} complete")
+            self.root.after(0, lambda: self.set_busy(False, f"Ready. Step {step_no} completed."))
         except Exception as exc:
             self.write_log(f"ERROR: {exc}")
             self.root.after(0, lambda: self.set_busy(False, "Error occurred. Check log."))
@@ -321,13 +370,12 @@ class ExperimentApp:
         try:
             self.ensure_initialized()
             for idx in range(15):
-                self.current_step = idx + 1
-                self.write_log(f"Running step {self.current_step}/15")
+                step_no = idx + 1
+                self.write_log(f"Running step {step_no}/15")
                 self.steps[idx]()
-                self.write_log(f"Step {self.current_step} complete")
+                self.write_log(f"Step {step_no} complete")
                 if idx < 14:
                     time.sleep(2)  # Required delay between steps
-            self.current_step = 16
             self.root.after(0, lambda: self.set_busy(False, "Ready. Full experiment completed (15/15)"))
         except Exception as exc:
             self.write_log(f"ERROR: {exc}")
@@ -455,11 +503,13 @@ class ExperimentApp:
 
     def step_13(self):
         self.write_log("Step 13: Start pictures")
-        cap = open_usb_camera(0)
-        if cap is None:
-            run_relay(P7, 3)
-            time.sleep(3)
-            cap = open_usb_camera(0)
+        cap = open_usb_camera_with_recovery(
+            device_index=0,
+            direct_tries=3,
+            retry_wait_s=1.0,
+            post_relay_wait_s=4.0,
+            post_relay_tries=6,
+        )
         if cap is None:
             raise RuntimeError("Camera not available for imaging")
         cap.release()
