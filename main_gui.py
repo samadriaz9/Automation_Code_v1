@@ -871,7 +871,55 @@ class ExperimentApp:
                 return None
             return v
 
-        run_delay_vars = [tk.StringVar(value="0"), tk.StringVar(value="8"), tk.StringVar(value="16"), tk.StringVar(value="24"), tk.StringVar(value="32")]
+        run_delay_vars = [
+            tk.StringVar(value="0"),
+            tk.StringVar(value="8"),
+            tk.StringVar(value="16"),
+            tk.StringVar(value="24"),
+            tk.StringVar(value="32"),
+        ]
+
+        def _adjust_delay_slot(idx, delta_h):
+            try:
+                current = float(str(run_delay_vars[idx].get()).strip())
+            except Exception:
+                current = 0.0
+            new_v = max(0.0, current + delta_h)
+            # Keep integer-like values clean for touch use.
+            run_delay_vars[idx].set(str(int(new_v)) if abs(new_v - int(new_v)) < 1e-6 else f"{new_v:.1f}")
+
+        def _make_delay_slot(row_idx, var, top_pad=6):
+            slot = tk.Frame(left_panel, bg="#CFD9EA")
+            slot.grid(row=row_idx, column=1, sticky="e", padx=(4, 12), pady=(top_pad, 6))
+            tk.Button(
+                slot,
+                text="-",
+                command=lambda v=var: _adjust_delay_slot(run_delay_vars.index(v), -1.0),
+                width=2,
+                height=1,
+                bg="#D9E2F2",
+                activebackground="#C8D6EE",
+                font=("TkDefaultFont", 12, "bold"),
+            ).pack(side=tk.LEFT, padx=(0, 4))
+            tk.Entry(
+                slot,
+                textvariable=var,
+                width=5,
+                justify=tk.CENTER,
+                state="readonly",
+                font=("TkDefaultFont", 12, "bold"),
+                readonlybackground="#FFFFFF",
+            ).pack(side=tk.LEFT)
+            tk.Button(
+                slot,
+                text="+",
+                command=lambda v=var: _adjust_delay_slot(run_delay_vars.index(v), 1.0),
+                width=2,
+                height=1,
+                bg="#D9E2F2",
+                activebackground="#C8D6EE",
+                font=("TkDefaultFont", 12, "bold"),
+            ).pack(side=tk.LEFT, padx=(4, 0))
 
         def _validate_run_slots(enabled_runs):
             delays_h = []
@@ -975,7 +1023,7 @@ class ExperimentApp:
         )
         combo_btn.grid(row=7, column=0, columnspan=3, sticky="ew", padx=6, pady=(12, 6))
 
-        run_btn_h = 64
+        run_btn_h = 80
         run_radius = 20
         run_font = 16
 
@@ -994,9 +1042,7 @@ class ExperimentApp:
             parent_bg="#CFD9EA",
         )
         _grid_run_button(full_btn, 8, top_pad=10)
-        tk.Entry(left_panel, textvariable=run_delay_vars[0], width=7, font=("TkDefaultFont", 12, "bold"), justify=tk.CENTER).grid(
-            row=8, column=1, sticky="e", padx=(6, 12), pady=(10, 6)
-        )
+        _make_delay_slot(8, run_delay_vars[0], top_pad=10)
 
         run2 = _make_rounded_button(
             left_panel,
@@ -1010,9 +1056,7 @@ class ExperimentApp:
             parent_bg="#CFD9EA",
         )
         _grid_run_button(run2, 9)
-        tk.Entry(left_panel, textvariable=run_delay_vars[1], width=7, font=("TkDefaultFont", 12, "bold"), justify=tk.CENTER).grid(
-            row=9, column=1, sticky="e", padx=(6, 12), pady=6
-        )
+        _make_delay_slot(9, run_delay_vars[1])
 
         run3 = _make_rounded_button(
             left_panel,
@@ -1026,9 +1070,7 @@ class ExperimentApp:
             parent_bg="#CFD9EA",
         )
         _grid_run_button(run3, 10)
-        tk.Entry(left_panel, textvariable=run_delay_vars[2], width=7, font=("TkDefaultFont", 12, "bold"), justify=tk.CENTER).grid(
-            row=10, column=1, sticky="e", padx=(6, 12), pady=6
-        )
+        _make_delay_slot(10, run_delay_vars[2])
 
         run4 = _make_rounded_button(
             left_panel,
@@ -1042,9 +1084,7 @@ class ExperimentApp:
             parent_bg="#CFD9EA",
         )
         _grid_run_button(run4, 11)
-        tk.Entry(left_panel, textvariable=run_delay_vars[3], width=7, font=("TkDefaultFont", 12, "bold"), justify=tk.CENTER).grid(
-            row=11, column=1, sticky="e", padx=(6, 12), pady=6
-        )
+        _make_delay_slot(11, run_delay_vars[3])
 
         run5 = _make_rounded_button(
             left_panel,
@@ -1058,9 +1098,7 @@ class ExperimentApp:
             parent_bg="#CFD9EA",
         )
         _grid_run_button(run5, 12)
-        tk.Entry(left_panel, textvariable=run_delay_vars[4], width=7, font=("TkDefaultFont", 12, "bold"), justify=tk.CENTER).grid(
-            row=12, column=1, sticky="e", padx=(6, 12), pady=6
-        )
+        _make_delay_slot(12, run_delay_vars[4])
 
         left_panel.rowconfigure(13, weight=1)
 
