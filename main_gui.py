@@ -814,7 +814,7 @@ class ExperimentApp:
             state="readonly",
             font=("TkDefaultFont", 14, "bold"),
             readonlybackground="#FFFFFF",
-        ).pack(side=tk.LEFT)
+        ).pack(side=tk.LEFT, ipady=6)
         tk.Button(
             count_slot,
             text="+",
@@ -938,7 +938,7 @@ class ExperimentApp:
                 state="readonly",
                 font=("TkDefaultFont", 14, "bold"),
                 readonlybackground="#FFFFFF",
-            ).pack(side=tk.LEFT)
+            ).pack(side=tk.LEFT, ipady=6)
             tk.Button(
                 slot,
                 text="+",
