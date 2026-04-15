@@ -722,7 +722,10 @@ class ExperimentApp:
         try:
             popup.attributes("-fullscreen", True)
         except Exception:
-            popup.geometry(f"{sw}x{sh}+0+0")
+            try:
+                popup.state("zoomed")
+            except Exception:
+                popup.geometry(f"{sw}x{sh}+0+0")
         popup.minsize(min(800, sw), min(480, sh))
         popup.lift()
         popup.focus_force()
@@ -814,7 +817,7 @@ class ExperimentApp:
             state="readonly",
             font=("TkDefaultFont", 14, "bold"),
             readonlybackground="#FFFFFF",
-        ).pack(side=tk.LEFT, ipady=6)
+        ).pack(side=tk.LEFT, ipady=10)
         tk.Button(
             count_slot,
             text="+",
@@ -938,7 +941,7 @@ class ExperimentApp:
                 state="readonly",
                 font=("TkDefaultFont", 14, "bold"),
                 readonlybackground="#FFFFFF",
-            ).pack(side=tk.LEFT, ipady=6)
+            ).pack(side=tk.LEFT, ipady=10)
             tk.Button(
                 slot,
                 text="+",
