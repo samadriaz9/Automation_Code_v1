@@ -786,16 +786,45 @@ class ExperimentApp:
             font=("TkDefaultFont", 11, "bold"),
         ).grid(row=1, column=0, columnspan=2, sticky="w", padx=14, pady=(4, 2))
         run_count_var = tk.IntVar(value=5)
-        count_spin = tk.Spinbox(
-            left_panel,
-            from_=1,
-            to=5,
+        count_slot = tk.Frame(left_panel, bg="#CFD9EA")
+        count_slot.grid(row=2, column=0, columnspan=2, sticky="w", padx=14, pady=(0, 8))
+
+        def _adjust_run_count(delta):
+            try:
+                current = int(run_count_var.get())
+            except Exception:
+                current = 1
+            run_count_var.set(max(1, min(5, current + delta)))
+
+        tk.Button(
+            count_slot,
+            text="-",
+            command=lambda: _adjust_run_count(-1),
+            width=3,
+            height=2,
+            bg="#D9E2F2",
+            activebackground="#C8D6EE",
+            font=("TkDefaultFont", 14, "bold"),
+        ).pack(side=tk.LEFT, padx=(0, 6))
+        tk.Entry(
+            count_slot,
             textvariable=run_count_var,
-            width=6,
-            font=("TkDefaultFont", 12, "bold"),
+            width=4,
             justify=tk.CENTER,
-        )
-        count_spin.grid(row=2, column=0, columnspan=2, sticky="w", padx=14, pady=(0, 8))
+            state="readonly",
+            font=("TkDefaultFont", 14, "bold"),
+            readonlybackground="#FFFFFF",
+        ).pack(side=tk.LEFT)
+        tk.Button(
+            count_slot,
+            text="+",
+            command=lambda: _adjust_run_count(1),
+            width=3,
+            height=2,
+            bg="#D9E2F2",
+            activebackground="#C8D6EE",
+            font=("TkDefaultFont", 14, "bold"),
+        ).pack(side=tk.LEFT, padx=(6, 0))
 
         tk.Label(
             left_panel,
@@ -895,11 +924,11 @@ class ExperimentApp:
                 slot,
                 text="-",
                 command=lambda v=var: _adjust_delay_slot(run_delay_vars.index(v), -1.0),
-                width=2,
-                height=1,
+                width=3,
+                height=2,
                 bg="#D9E2F2",
                 activebackground="#C8D6EE",
-                font=("TkDefaultFont", 12, "bold"),
+                font=("TkDefaultFont", 14, "bold"),
             ).pack(side=tk.LEFT, padx=(0, 4))
             tk.Entry(
                 slot,
@@ -907,18 +936,18 @@ class ExperimentApp:
                 width=5,
                 justify=tk.CENTER,
                 state="readonly",
-                font=("TkDefaultFont", 12, "bold"),
+                font=("TkDefaultFont", 14, "bold"),
                 readonlybackground="#FFFFFF",
             ).pack(side=tk.LEFT)
             tk.Button(
                 slot,
                 text="+",
                 command=lambda v=var: _adjust_delay_slot(run_delay_vars.index(v), 1.0),
-                width=2,
-                height=1,
+                width=3,
+                height=2,
                 bg="#D9E2F2",
                 activebackground="#C8D6EE",
-                font=("TkDefaultFont", 12, "bold"),
+                font=("TkDefaultFont", 14, "bold"),
             ).pack(side=tk.LEFT, padx=(4, 0))
 
         def _validate_run_slots(enabled_runs):
