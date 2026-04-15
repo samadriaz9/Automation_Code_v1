@@ -311,7 +311,7 @@ class ExperimentApp:
         outer.columnconfigure(0, weight=1)
         outer.rowconfigure(4, weight=1)
 
-        header = ttk.Frame(outer, style="Header.TFrame", padding=10)
+        header = ttk.Frame(outer, style="Header.TFrame", padding=12)
         header.grid(row=0, column=0, sticky="ew", pady=(0, 8))
         header.columnconfigure(0, weight=1)
 
@@ -330,12 +330,12 @@ class ExperimentApp:
             header,
             text="Close",
             command=self.on_exit,
-            style="ActionOrange.TButton",
+            style="Close.TButton",
         )
         self.btn_close.grid(row=0, column=1, sticky="e", padx=(12, 0))
 
         # Push main action buttons down for easier thumb reach on 7" touch LCD.
-        spacer = ttk.Frame(outer, style="App.TFrame", height=18)
+        spacer = ttk.Frame(outer, style="App.TFrame", height=24)
         spacer.grid(row=1, column=0, sticky="ew")
         spacer.grid_propagate(False)
 
@@ -352,9 +352,13 @@ class ExperimentApp:
         btn_row.columnconfigure(0, weight=1)
         btn_row.columnconfigure(1, weight=1)
 
-        bw, bh, br = 440, 96, 22
-        ph_steps = _rounded_button_photo(bw, bh, br, (22, 98, 212), "Run Experiment")
-        ph_cam = _rounded_button_photo(bw, bh, br, (212, 106, 9), "Test Camera")
+        bw, bh, br = 480, 112, 26
+        ph_steps = _rounded_button_photo(
+            bw, bh, br, (22, 98, 212), "Run Experiment", font_size=22
+        )
+        ph_cam = _rounded_button_photo(
+            bw, bh, br, (212, 106, 9), "Test Camera", font_size=22
+        )
 
         self.btn_step = tk.Button(
             btn_row,
@@ -394,7 +398,7 @@ class ExperimentApp:
             outer,
             wrap=tk.WORD,
             height=16,
-            font=("TkDefaultFont", 11),
+            font=("TkDefaultFont", 12),
             bg="#0D1726",
             fg="#EAF1FF",
             insertbackground="#EAF1FF",
@@ -415,14 +419,14 @@ class ExperimentApp:
         style.configure("Header.TFrame", background="#113058")
         style.configure("Card.TFrame", background="#F7FAFF")
         style.configure("StatusCard.TFrame", background="#DFE9F8")
-        style.configure("Title.TLabel", background="#113058", foreground="#F2F7FF", font=("TkDefaultFont", 18, "bold"))
-        style.configure("SubTitle.TLabel", background="#113058", foreground="#BFD3F2", font=("TkDefaultFont", 11, "bold"))
-        style.configure("CardTitle.TLabel", background="#F7FAFF", foreground="#1D3557", font=("TkDefaultFont", 12, "bold"))
-        style.configure("StatusKey.TLabel", background="#DFE9F8", foreground="#1D3557", font=("TkDefaultFont", 11, "bold"))
-        style.configure("Status.TLabel", background="#DFE9F8", foreground="#173C6A", font=("TkDefaultFont", 11, "bold"))
+        style.configure("Title.TLabel", background="#113058", foreground="#F2F7FF", font=("TkDefaultFont", 22, "bold"))
+        style.configure("SubTitle.TLabel", background="#113058", foreground="#BFD3F2", font=("TkDefaultFont", 14, "bold"))
+        style.configure("CardTitle.TLabel", background="#F7FAFF", foreground="#1D3557", font=("TkDefaultFont", 15, "bold"))
+        style.configure("StatusKey.TLabel", background="#DFE9F8", foreground="#1D3557", font=("TkDefaultFont", 13, "bold"))
+        style.configure("Status.TLabel", background="#DFE9F8", foreground="#173C6A", font=("TkDefaultFont", 13, "bold"))
         style.configure(
             "ActionBlue.TButton",
-            font=("TkDefaultFont", 12, "bold"),
+            font=("TkDefaultFont", 14, "bold"),
             padding=(10, 14),
             foreground="white",
             background="#1662D4",
@@ -431,7 +435,7 @@ class ExperimentApp:
         style.map("ActionBlue.TButton", background=[("active", "#0F56BF")])
         style.configure(
             "ActionGreen.TButton",
-            font=("TkDefaultFont", 12, "bold"),
+            font=("TkDefaultFont", 14, "bold"),
             padding=(10, 14),
             foreground="white",
             background="#0C9E5E",
@@ -440,14 +444,23 @@ class ExperimentApp:
         style.map("ActionGreen.TButton", background=[("active", "#09874F")])
         style.configure(
             "ActionOrange.TButton",
-            font=("TkDefaultFont", 12, "bold"),
+            font=("TkDefaultFont", 14, "bold"),
             padding=(10, 14),
             foreground="white",
             background="#D46A09",
             borderwidth=1,
         )
         style.map("ActionOrange.TButton", background=[("active", "#B45705")])
-        style.configure("StepPopup.TButton", font=("TkDefaultFont", 11, "bold"), padding=(8, 10))
+        style.configure(
+            "Close.TButton",
+            font=("TkDefaultFont", 14, "bold"),
+            padding=(16, 12),
+            foreground="white",
+            background="#C24D00",
+            borderwidth=1,
+        )
+        style.map("Close.TButton", background=[("active", "#A54200")])
+        style.configure("StepPopup.TButton", font=("TkDefaultFont", 13, "bold"), padding=(10, 12))
 
     def _run_with_gpio_retry(self, label, fn, *args, **kwargs):
         """Retry several times if GPIO allocation state is transiently invalid."""
