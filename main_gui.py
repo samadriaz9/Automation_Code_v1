@@ -12,6 +12,7 @@ import glob
 import os
 import signal
 import sys
+import threading
 import time
 import tkinter as tk
 from tkinter import messagebox, ttk
@@ -212,7 +213,7 @@ def open_usb_camera_with_recovery(
 
 
 class CameraTestWindow:
-    def __init__(self, parent):
+    def __init__(self, parent, cap, on_close=None):
         self.win = tk.Toplevel(parent)
         try:
             if hasattr(parent, "_app_icon_photo") and parent._app_icon_photo is not None:
@@ -223,6 +224,7 @@ class CameraTestWindow:
         self.win.geometry("900x650")
         self.win.minsize(500, 350)
         self.win.protocol("WM_DELETE_WINDOW", self.on_close)
+        self._on_close_cb = on_close
 
         container = ttk.Frame(self.win, padding=8)
         container.pack(fill=tk.BOTH, expand=True)
@@ -230,16 +232,9 @@ class CameraTestWindow:
         self.preview.pack(fill=tk.BOTH, expand=True)
         ttk.Button(container, text="Close", command=self.on_close).pack(anchor=tk.E, pady=(8, 0))
 
-        self.cap = open_usb_camera_with_recovery(
-            device_index=0,
-            direct_tries=3,
-            retry_wait_s=1.0,
-            post_relay_wait_s=4.0,
-            post_relay_tries=6,
-        )
-
+        self.cap = cap
         if self.cap is None:
-            messagebox.showerror("Camera", "Camera not available even after relay cycle.")
+            messagebox.showerror("Camera", "Error in loading camera. See the console.")
             self.win.after(50, self.win.destroy)
             return
 
@@ -273,6 +268,11 @@ class CameraTestWindow:
             self.cap = None
         # Requirement: close should switch camera off through relay cycle.
         run_relay(P7, 3)
+        if callable(self._on_close_cb):
+            try:
+                self._on_close_cb()
+            except Exception:
+                pass
         self.win.destroy()
 
 
@@ -454,6 +454,9 @@ class ExperimentApp:
         )
         self.log.grid(row=4, column=0, sticky="nsew")
         self._incubation_stop_requested = False
+        self._camera_test_active = False
+        self._camera_test_done_once = False
+        self._camera_loading_popup = None
 
     def _setup_styles(self):
         style = ttk.Style(self.root)
@@ -851,9 +854,108 @@ class ExperimentApp:
             self.root.after(0, lambda: self.set_busy(False, "Error occurred during full run."))
 
     def open_camera_test(self):
-        if self.is_busy:
+        if self.is_busy or self._camera_test_active:
             return
-        CameraTestWindow(self.root)
+        if self._camera_test_done_once:
+            self._ask_camera_retest_confirmation()
+            return
+        self._start_camera_test_launch()
+
+    def _ask_camera_retest_confirmation(self):
+        popup = tk.Toplevel(self.root)
+        self._apply_app_icon(popup)
+        popup.title("Confirm Camera Test")
+        popup.geometry("520x220")
+        popup.minsize(500, 200)
+        popup.transient(self.root)
+        popup.grab_set()
+
+        frame = ttk.Frame(popup, padding=14, style="Card.TFrame")
+        frame.pack(fill=tk.BOTH, expand=True)
+        ttk.Label(
+            frame,
+            text="Do you want to test camera again?",
+            style="CardTitle.TLabel",
+        ).pack(anchor="w", pady=(4, 14))
+
+        row = ttk.Frame(frame, style="Card.TFrame")
+        row.pack(fill=tk.X, pady=(6, 0))
+        row.columnconfigure(0, weight=1)
+        row.columnconfigure(1, weight=1)
+
+        def _yes():
+            popup.destroy()
+            self._start_camera_test_launch()
+
+        ttk.Button(row, text="Yes", style="ActionGreen.TButton", command=_yes).grid(
+            row=0, column=0, sticky="ew", padx=(0, 8)
+        )
+        ttk.Button(row, text="No", style="ActionOrange.TButton", command=popup.destroy).grid(
+            row=0, column=1, sticky="ew", padx=(8, 0)
+        )
+
+    def _show_camera_loading_popup(self):
+        popup = tk.Toplevel(self.root)
+        self._apply_app_icon(popup)
+        popup.title("Loading Camera")
+        popup.geometry("460x190")
+        popup.minsize(440, 180)
+        popup.transient(self.root)
+        popup.grab_set()
+
+        frame = ttk.Frame(popup, padding=14, style="Card.TFrame")
+        frame.pack(fill=tk.BOTH, expand=True)
+        ttk.Label(frame, text="Switching on camera and loading stream...", style="CardTitle.TLabel").pack(
+            anchor="w", pady=(2, 10)
+        )
+        bar = ttk.Progressbar(frame, mode="indeterminate", length=380)
+        bar.pack(fill=tk.X, pady=(6, 2))
+        bar.start(14)
+        ttk.Label(frame, text="Please wait", style="Status.TLabel").pack(anchor="w", pady=(8, 0))
+        self._camera_loading_popup = popup
+
+    def _start_camera_test_launch(self):
+        self._camera_test_active = True
+        self.btn_camera.config(state=tk.DISABLED)
+        self._show_camera_loading_popup()
+        worker = threading.Thread(target=self._camera_open_worker, daemon=True)
+        worker.start()
+
+    def _camera_open_worker(self):
+        cap = open_usb_camera_with_recovery(
+            device_index=0,
+            direct_tries=3,
+            retry_wait_s=1.0,
+            post_relay_wait_s=4.0,
+            post_relay_tries=6,
+        )
+        self.root.after(0, lambda: self._finish_camera_open(cap))
+
+    def _finish_camera_open(self, cap):
+        try:
+            if self._camera_loading_popup is not None:
+                try:
+                    self._camera_loading_popup.grab_release()
+                except Exception:
+                    pass
+                self._camera_loading_popup.destroy()
+                self._camera_loading_popup = None
+        except Exception:
+            pass
+
+        if cap is None:
+            self.write_log("Camera error: could not open stream after recovery retries.")
+            messagebox.showerror("Camera", "Error in loading camera. See the console.")
+            self._camera_test_active = False
+            self.btn_camera.config(state=tk.NORMAL)
+            return
+
+        CameraTestWindow(self.root, cap=cap, on_close=self._on_camera_test_closed)
+
+    def _on_camera_test_closed(self):
+        self._camera_test_active = False
+        self._camera_test_done_once = True
+        self.btn_camera.config(state=tk.NORMAL)
 
     # ---------- 15 experiment steps ----------
     def step_1(self):
