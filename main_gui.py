@@ -289,6 +289,8 @@ class ExperimentApp:
         self._setup_styles()
         self._app_icon_photo = None
         self._header_bg_photo = None
+        self._title_icon_photo = None
+        self._status_bg_photo = None
         self._apply_app_icon(self.root)
 
         self.is_busy = False
@@ -340,22 +342,26 @@ class ExperimentApp:
         header.configure(height=120)
         header.grid_propagate(False)
 
-        self._apply_header_background(header)
+        title_wrap = tk.Frame(header, bg="#113058")
+        title_wrap.grid(row=0, column=0, rowspan=2, sticky="w")
+        self._apply_title_icon(title_wrap)
 
+        text_col = tk.Frame(title_wrap, bg="#113058")
+        text_col.pack(side=tk.LEFT, padx=(10, 0))
         tk.Label(
-            header,
+            text_col,
             text="Automatic Microbial Detection System",
             bg="#113058",
             fg="#F2F7FF",
             font=("TkDefaultFont", 22, "bold"),
-        ).grid(row=0, column=0, sticky="w")
+        ).pack(anchor="w")
         tk.Label(
-            header,
+            text_col,
             text="Touch Control Console",
             bg="#113058",
             fg="#BFD3F2",
             font=("TkDefaultFont", 14, "bold"),
-        ).grid(row=1, column=0, sticky="w", pady=(2, 0))
+        ).pack(anchor="w", pady=(2, 0))
 
         close_img = _rounded_button_photo(
             210, 84, 30, (194, 77, 0), "Close", font_size=30
@@ -428,6 +434,7 @@ class ExperimentApp:
         self.status_var = tk.StringVar(value="Ready.")
         status_card = ttk.Frame(outer, style="StatusCard.TFrame", padding=(10, 8))
         status_card.grid(row=3, column=0, sticky="ew", pady=(0, 8))
+        self._apply_status_watermark(status_card)
         ttk.Label(status_card, text="System Status:", style="StatusKey.TLabel").grid(row=0, column=0, sticky="w")
         ttk.Label(status_card, textvariable=self.status_var, style="Status.TLabel").grid(
             row=0, column=1, sticky="w", padx=(8, 0)
@@ -509,8 +516,26 @@ class ExperimentApp:
         except Exception:
             pass
 
-    def _apply_header_background(self, header_frame):
-        """Apply background.png in the header region if present."""
+    def _apply_title_icon(self, parent_frame):
+        """Show icon.png next to main system title."""
+        icon_path = _find_asset_path(
+            "icon.png",
+            extra_candidates=[
+                r"D:\office_project_data\automation_device\Automation_Code_v1\icon.png",
+            ],
+        )
+        if not icon_path:
+            return
+        try:
+            src = Image.open(icon_path).convert("RGBA")
+            icon_img = src.resize((72, 72), Image.LANCZOS)
+            self._title_icon_photo = ImageTk.PhotoImage(icon_img)
+            tk.Label(parent_frame, image=self._title_icon_photo, bg="#113058").pack(side=tk.LEFT)
+        except Exception:
+            pass
+
+    def _apply_status_watermark(self, status_frame):
+        """Apply background.png as watermark inside System Status card."""
         bg_path = _find_asset_path(
             "background.png",
             extra_candidates=[
@@ -521,10 +546,13 @@ class ExperimentApp:
             return
         try:
             src = Image.open(bg_path).convert("RGB")
-            banner = src.resize((1000, 120), Image.LANCZOS)
-            self._header_bg_photo = ImageTk.PhotoImage(banner)
-            bg_label = tk.Label(header_frame, image=self._header_bg_photo, bd=0, highlightthickness=0)
+            banner = src.resize((1000, 82), Image.LANCZOS)
+            # Lighten to make it behave like a watermark.
+            banner = Image.blend(banner, Image.new("RGB", banner.size, (255, 255, 255)), 0.70)
+            self._status_bg_photo = ImageTk.PhotoImage(banner)
+            bg_label = tk.Label(status_frame, image=self._status_bg_photo, bd=0, highlightthickness=0)
             bg_label.place(x=0, y=0, relwidth=1, relheight=1)
+            bg_label.lower()
         except Exception:
             pass
 
