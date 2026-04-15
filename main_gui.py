@@ -64,6 +64,33 @@ def _rounded_button_photo(width, height, radius, bg_rgb, text, fg="#FFFFFF", fon
     dr.text((tx, ty), text, fill=fg, font=font)
     return ImageTk.PhotoImage(img)
 
+
+def _make_rounded_button(
+    parent,
+    text,
+    command,
+    width,
+    height,
+    radius,
+    bg_rgb,
+    font_size=18,
+    parent_bg="#F3F6FB",
+):
+    """Create a rounded-corner tk.Button using a generated image."""
+    img = _rounded_button_photo(width, height, radius, bg_rgb, text, font_size=font_size)
+    btn = tk.Button(
+        parent,
+        image=img,
+        command=command,
+        borderwidth=0,
+        highlightthickness=0,
+        cursor="hand2",
+        bg=parent_bg,
+        activebackground=parent_bg,
+    )
+    btn.image = img
+    return btn
+
 from camera_module import Camera_home, Camera_down, cleanup as camera_cleanup
 from filteration_flask import (
     Filteration_flask_up,
@@ -674,32 +701,47 @@ class ExperimentApp:
             popup.destroy()
             self.root.after(50, self.run_all_steps)
 
-        full_btn = ttk.Button(
+        full_btn = _make_rounded_button(
             wrapper,
-            text="Run Full Experiment (all 15 steps, 2 s between steps)",
-            command=_start_full_experiment,
-            style="ActionGreen.TButton",
+            "Run Full Experiment (all 15 steps, 2 s between steps)",
+            _start_full_experiment,
+            width=900,
+            height=72,
+            radius=24,
+            bg_rgb=(12, 158, 94),
+            font_size=20,
+            parent_bg="#E9EEF7",
         )
         full_btn.grid(row=0, column=0, columnspan=3, sticky="ew", padx=6, pady=(0, 10))
 
         for idx in range(15):
             step_no = idx + 1
             label = self.step_labels[idx]
-            btn = ttk.Button(
+            btn = _make_rounded_button(
                 wrapper,
-                text=label,
-                command=lambda n=step_no: self.run_specific_step(n),
-                style="StepPopup.TButton",
+                label,
+                lambda n=step_no: self.run_specific_step(n),
+                width=300,
+                height=62,
+                radius=18,
+                bg_rgb=(22, 98, 212),
+                font_size=16,
+                parent_bg="#E9EEF7",
             )
             r = 1 + idx // 3
             c = idx % 3
             btn.grid(row=r, column=c, sticky="ew", padx=6, pady=6)
 
-        combo_btn = ttk.Button(
+        combo_btn = _make_rounded_button(
             wrapper,
-            text="Incubate + Pictures",
-            command=self.run_incubate_and_picture_flow,
-            style="ActionBlue.TButton",
+            "Incubate + Pictures",
+            self.run_incubate_and_picture_flow,
+            width=900,
+            height=72,
+            radius=24,
+            bg_rgb=(22, 98, 212),
+            font_size=22,
+            parent_bg="#E9EEF7",
         )
         combo_btn.grid(row=6, column=0, columnspan=3, sticky="ew", padx=6, pady=(12, 6))
 
@@ -818,12 +860,14 @@ class ExperimentApp:
             self.set_busy(True, "Running incubation profile + picture capture...")
             self.root.after(10, lambda: self._run_incubate_and_picture_worker(profiles))
 
-        ttk.Button(frame, text="Start", style="ActionGreen.TButton", command=_start_flow).grid(
-            row=6, column=1, sticky="ew", pady=(16, 4), padx=6
+        btn_start = _make_rounded_button(
+            frame, "Start", _start_flow, 260, 72, 24, (12, 158, 94), font_size=24, parent_bg="#E9EEF7"
         )
-        ttk.Button(frame, text="Cancel", style="ActionOrange.TButton", command=popup.destroy).grid(
-            row=6, column=2, sticky="ew", pady=(16, 4), padx=6
+        btn_start.grid(row=6, column=1, sticky="ew", pady=(16, 4), padx=6)
+        btn_cancel = _make_rounded_button(
+            frame, "Cancel", popup.destroy, 260, 72, 24, (212, 106, 9), font_size=24, parent_bg="#E9EEF7"
         )
+        btn_cancel.grid(row=6, column=2, sticky="ew", pady=(16, 4), padx=6)
 
     def _run_incubate_and_picture_worker(self, profiles):
         try:
@@ -910,12 +954,14 @@ class ExperimentApp:
             popup.destroy()
             self._start_camera_test_launch()
 
-        ttk.Button(row, text="Yes", style="ActionGreen.TButton", command=_yes).grid(
-            row=0, column=0, sticky="ew", padx=(0, 8)
+        btn_yes = _make_rounded_button(
+            row, "Yes", _yes, 220, 68, 22, (12, 158, 94), font_size=22, parent_bg="#F7FAFF"
         )
-        ttk.Button(row, text="No", style="ActionOrange.TButton", command=popup.destroy).grid(
-            row=0, column=1, sticky="ew", padx=(8, 0)
+        btn_yes.grid(row=0, column=0, sticky="ew", padx=(0, 8))
+        btn_no = _make_rounded_button(
+            row, "No", popup.destroy, 220, 68, 22, (212, 106, 9), font_size=22, parent_bg="#F7FAFF"
         )
+        btn_no.grid(row=0, column=1, sticky="ew", padx=(8, 0))
 
     def _show_camera_loading_popup(self):
         popup = tk.Toplevel(self.root)
@@ -926,15 +972,25 @@ class ExperimentApp:
         popup.transient(self.root)
         popup.grab_set()
 
-        frame = ttk.Frame(popup, padding=14, style="Card.TFrame")
-        frame.pack(fill=tk.BOTH, expand=True)
-        ttk.Label(frame, text="Switching on camera and loading stream...", style="CardTitle.TLabel").pack(
-            anchor="w", pady=(2, 10)
-        )
+        frame = tk.Frame(popup, bg="#F7FAFF")
+        frame.pack(fill=tk.BOTH, expand=True, padx=14, pady=14)
+        tk.Label(
+            frame,
+            text="Switching on camera and loading stream...",
+            bg="#F7FAFF",
+            fg="#1D3557",
+            font=("TkDefaultFont", 15, "bold"),
+        ).pack(anchor="w", pady=(2, 10))
         bar = ttk.Progressbar(frame, mode="indeterminate", length=380)
         bar.pack(fill=tk.X, pady=(6, 2))
         bar.start(14)
-        ttk.Label(frame, text="Please wait", style="Status.TLabel").pack(anchor="w", pady=(8, 0))
+        tk.Label(
+            frame,
+            text="Please wait...",
+            bg="#F7FAFF",
+            fg="#173C6A",
+            font=("TkDefaultFont", 13, "bold"),
+        ).pack(anchor="w", pady=(8, 0))
         self._camera_loading_popup = popup
 
     def _start_camera_test_launch(self):
@@ -1174,7 +1230,9 @@ class ExperimentApp:
         def _request_stop():
             self._incubation_stop_requested = True
 
-        stop_btn = ttk.Button(root_frame, text="Stop", style="ActionOrange.TButton", command=_request_stop)
+        stop_btn = _make_rounded_button(
+            root_frame, "Stop", _request_stop, 760, 82, 28, (212, 106, 9), font_size=30, parent_bg="#F3F6FB"
+        )
         stop_btn.grid(row=4, column=0, columnspan=2, sticky="ew", padx=8, pady=(4, 0))
 
         start = time.time()
