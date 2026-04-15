@@ -397,6 +397,7 @@ class ExperimentApp:
 
         self.is_busy = False
         self.initialized = False
+        self._last_step_success = None
 
         self.steps = [
             self.step_1,
@@ -432,6 +433,8 @@ class ExperimentApp:
             "Trash Transfer",
             "Sterilize",
         ]
+        # Full run sequence follows the "actual experiment" flow shown in manual section.
+        self.full_experiment_sequence = [1] + list(range(4, 16))
 
         outer = ttk.Frame(root, padding=12, style="App.TFrame")
         outer.pack(fill=tk.BOTH, expand=True)
@@ -1234,6 +1237,84 @@ class ExperimentApp:
 
         section_row = 2
         step_btn_w = min(300, max(200, (sw - 140) // 3))
+        step_btn_h = 62
+        step_btn_radius = 18
+        step_btn_font = 16
+        popup_step_buttons = {}
+        popup_step_completed = set()
+
+        def _set_popup_step_button_visual(step_no, state_name):
+            btn = popup_step_buttons.get(step_no)
+            if btn is None:
+                return
+            img = getattr(btn, f"_img_{state_name}", None)
+            if img is not None:
+                btn.config(image=img)
+                btn.image = img
+
+        def _run_step_from_popup(step_no):
+            if self.is_busy:
+                return
+            if step_no in popup_step_completed:
+                ok = messagebox.askyesno(
+                    "Confirm Step",
+                    f"{self.step_labels[step_no - 1]} already completed once.\nRun this step again?",
+                    parent=popup,
+                )
+                if not ok:
+                    return
+
+            btn = popup_step_buttons.get(step_no)
+            if btn is not None:
+                btn.config(state=tk.DISABLED)
+            _set_popup_step_button_visual(step_no, "running")
+            self.run_specific_step(step_no)
+
+            def _poll_finish():
+                try:
+                    if not popup.winfo_exists():
+                        return
+                except Exception:
+                    return
+                if self.is_busy:
+                    popup.after(250, _poll_finish)
+                    return
+
+                if self._last_step_success is True:
+                    popup_step_completed.add(step_no)
+                    _set_popup_step_button_visual(step_no, "done")
+                else:
+                    _set_popup_step_button_visual(step_no, "normal")
+                if btn is not None:
+                    btn.config(state=tk.NORMAL)
+
+            popup.after(250, _poll_finish)
+
+        def _make_manual_step_button(parent, label, step_no, base_color=(22, 98, 212)):
+            btn = _make_rounded_button(
+                parent,
+                label,
+                lambda n=step_no: _run_step_from_popup(n),
+                width=step_btn_w,
+                height=step_btn_h,
+                radius=step_btn_radius,
+                bg_rgb=base_color,
+                font_size=step_btn_font,
+                parent_bg="#E9EEF7",
+            )
+            btn._img_normal = _rounded_button_photo(
+                step_btn_w, step_btn_h, step_btn_radius, base_color, label, font_size=step_btn_font
+            )
+            btn._img_running = _rounded_button_photo(
+                step_btn_w, step_btn_h, step_btn_radius, (214, 133, 18), label, font_size=step_btn_font
+            )
+            btn._img_done = _rounded_button_photo(
+                step_btn_w, step_btn_h, step_btn_radius, (24, 148, 86), label, font_size=step_btn_font
+            )
+            btn.config(image=btn._img_normal)
+            btn.image = btn._img_normal
+            popup_step_buttons[step_no] = btn
+            return btn
 
         tk.Label(
             wrapper,
@@ -1248,19 +1329,8 @@ class ExperimentApp:
         for i, step_no in enumerate(consumable_steps):
             label = self.step_labels[step_no - 1]
             consumable_color = (212, 126, 18) if step_no == 2 else (146, 72, 198)
-            btn = _make_rounded_button(
-                wrapper,
-                label,
-                lambda n=step_no: self.run_specific_step(n),
-                width=step_btn_w,
-                height=62,
-                radius=18,
-                bg_rgb=consumable_color,
-                font_size=16,
-                parent_bg="#E9EEF7",
-            )
+            btn = _make_manual_step_button(wrapper, label, step_no, base_color=consumable_color)
             btn.grid(row=section_row, column=i, sticky="ew", padx=6, pady=6)
-        section_row += 1
 
         insert_media_var = tk.StringVar(value="")
         tk.Label(
@@ -1269,7 +1339,7 @@ class ExperimentApp:
             background="#E9EEF7",
             foreground="#0E7A47",
             font=("TkDefaultFont", 15, "bold"),
-        ).grid(row=section_row, column=0, columnspan=3, sticky="w", padx=6, pady=(0, 6))
+        ).grid(row=section_row, column=2, sticky="w", padx=6, pady=6)
 
         def _refresh_insert_media_label():
             try:
@@ -1301,17 +1371,7 @@ class ExperimentApp:
         manual_steps = [1] + list(range(4, 16))  # Remaining steps in sequence.
         for idx, step_no in enumerate(manual_steps):
             label = self.step_labels[step_no - 1]
-            btn = _make_rounded_button(
-                wrapper,
-                label,
-                lambda n=step_no: self.run_specific_step(n),
-                width=step_btn_w,
-                height=62,
-                radius=18,
-                bg_rgb=(22, 98, 212),
-                font_size=16,
-                parent_bg="#E9EEF7",
-            )
+            btn = _make_manual_step_button(wrapper, label, step_no, base_color=(22, 98, 212))
             r = section_row + idx // 3
             c = idx % 3
             btn.grid(row=r, column=c, sticky="ew", padx=6, pady=6)
@@ -1525,6 +1585,7 @@ class ExperimentApp:
             return
         if step_no < 1 or step_no > 15:
             return
+        self._last_step_success = None
         self.set_busy(True, f"Running step {step_no}/15...")
         self.root.after(10, lambda: self._run_specific_step_worker(step_no))
 
@@ -1671,9 +1732,11 @@ class ExperimentApp:
             self.ensure_initialized()
             step_fn = self.steps[int(step_no) - 1]
             step_fn()
+            self._last_step_success = True
             self.write_log(f"Step {step_no} complete")
             self.root.after(0, lambda: self.set_busy(False, f"Ready. Step {step_no} completed."))
         except Exception as exc:
+            self._last_step_success = False
             self.write_log(f"ERROR: {exc}")
             self.root.after(0, lambda: self.set_busy(False, "Error occurred. Check log."))
 
@@ -1705,20 +1768,28 @@ class ExperimentApp:
     def run_all_steps(self):
         if self.is_busy:
             return
-        self.set_busy(True, "Running full experiment (15 steps)...")
+        total = len(self.full_experiment_sequence)
+        self.set_busy(True, f"Running full experiment ({total} steps)...")
         self.root.after(10, self._run_all_worker)
 
     def _run_all_worker(self):
         try:
             self.ensure_initialized()
-            for idx in range(15):
-                step_no = idx + 1
-                self.write_log(f"Running step {step_no}/15")
-                self.steps[idx]()
-                self.write_log(f"Step {step_no} complete")
-                if idx < 14:
+            total = len(self.full_experiment_sequence)
+            for run_idx, step_no in enumerate(self.full_experiment_sequence, start=1):
+                step_label = self.step_labels[step_no - 1]
+                self.status_var.set(f"Running {run_idx}/{total}: {step_label}")
+                self.write_log(f"Running {run_idx}/{total}: {step_label} (Step {step_no})")
+                self.steps[step_no - 1]()
+                self.write_log(f"Completed {run_idx}/{total}: {step_label} (Step {step_no})")
+                if run_idx < total:
                     time.sleep(2)  # Required delay between steps
-            self.root.after(0, lambda: self.set_busy(False, "Ready. Full experiment completed (15/15)"))
+            self.root.after(
+                0,
+                lambda: self.set_busy(
+                    False, f"Ready. Full experiment completed ({total}/{total})."
+                ),
+            )
         except Exception as exc:
             self.write_log(f"ERROR: {exc}")
             self.root.after(0, lambda: self.set_busy(False, "Error occurred during full run."))
