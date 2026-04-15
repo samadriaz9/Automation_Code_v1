@@ -717,12 +717,36 @@ class ExperimentApp:
         popup = tk.Toplevel(self.root)
         self._apply_app_icon(popup)
         popup.title("Run Experiment")
-        popup.geometry("980x560")
-        popup.minsize(900, 520)
+        sw = self.root.winfo_screenwidth()
+        sh = self.root.winfo_screenheight()
+        popup.geometry(f"{sw}x{sh}+0+0")
+        popup.minsize(min(900, sw), min(520, sh))
         popup.transient(self.root)
 
-        wrapper = ttk.Frame(popup, padding=10)
-        wrapper.pack(fill=tk.BOTH, expand=True)
+        outer = tk.Frame(popup, bg="#E9EEF7")
+        outer.pack(fill=tk.BOTH, expand=True)
+        outer.rowconfigure(0, weight=1)
+        outer.rowconfigure(1, weight=0)
+        outer.columnconfigure(0, weight=1)
+
+        canvas = tk.Canvas(outer, bg="#E9EEF7", highlightthickness=0)
+        vsb = ttk.Scrollbar(outer, orient=tk.VERTICAL, command=canvas.yview)
+        canvas.configure(yscrollcommand=vsb.set)
+        canvas.grid(row=0, column=0, sticky="nsew")
+        vsb.grid(row=0, column=1, sticky="ns")
+
+        wrapper = ttk.Frame(canvas, padding=10, style="App.TFrame")
+        win_id = canvas.create_window((0, 0), window=wrapper, anchor="nw")
+
+        def _on_canvas_configure(event):
+            canvas.itemconfigure(win_id, width=event.width)
+
+        def _on_wrapper_configure(_event=None):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+
+        canvas.bind("<Configure>", _on_canvas_configure)
+        wrapper.bind("<Configure>", _on_wrapper_configure)
+
         for c in range(3):
             wrapper.columnconfigure(c, weight=1)
 
@@ -734,7 +758,7 @@ class ExperimentApp:
             wrapper,
             "Run Full Experiment (all 15 steps, 2 s between steps)",
             _start_full_experiment,
-            width=900,
+            width=min(900, sw - 80),
             height=72,
             radius=24,
             bg_rgb=(12, 158, 94),
@@ -750,7 +774,7 @@ class ExperimentApp:
                 wrapper,
                 label,
                 lambda n=step_no: self.run_specific_step(n),
-                width=300,
+                width=min(300, (sw - 120) // 3),
                 height=62,
                 radius=18,
                 bg_rgb=(22, 98, 212),
@@ -765,7 +789,7 @@ class ExperimentApp:
             wrapper,
             "Incubate + Pictures",
             self.run_incubate_and_picture_flow,
-            width=900,
+            width=min(900, sw - 80),
             height=72,
             radius=24,
             bg_rgb=(22, 98, 212),
@@ -773,6 +797,23 @@ class ExperimentApp:
             parent_bg="#E9EEF7",
         )
         combo_btn.grid(row=6, column=0, columnspan=3, sticky="ew", padx=6, pady=(12, 6))
+
+        bottom = tk.Frame(outer, bg="#E9EEF7")
+        bottom.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(8, 10))
+        bottom.columnconfigure(0, weight=1)
+
+        close_exp = _make_rounded_button(
+            bottom,
+            "Close",
+            popup.destroy,
+            width=min(420, sw - 120),
+            height=76,
+            radius=26,
+            bg_rgb=(212, 106, 9),
+            font_size=24,
+            parent_bg="#E9EEF7",
+        )
+        close_exp.grid(row=0, column=0, pady=4)
 
     def run_specific_step(self, step_no):
         if self.is_busy:
