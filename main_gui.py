@@ -352,12 +352,12 @@ class ExperimentApp:
         btn_row.columnconfigure(0, weight=1)
         btn_row.columnconfigure(1, weight=1)
 
-        bw, bh, br = 480, 112, 26
+        bw, bh, br = 576, 134, 31
         ph_steps = _rounded_button_photo(
-            bw, bh, br, (22, 98, 212), "Run Experiment", font_size=22
+            bw, bh, br, (22, 98, 212), "Run Experiment", font_size=26
         )
         ph_cam = _rounded_button_photo(
-            bw, bh, br, (212, 106, 9), "Test Camera", font_size=22
+            bw, bh, br, (212, 106, 9), "Test Camera", font_size=26
         )
 
         self.btn_step = tk.Button(
@@ -453,8 +453,8 @@ class ExperimentApp:
         style.map("ActionOrange.TButton", background=[("active", "#B45705")])
         style.configure(
             "Close.TButton",
-            font=("TkDefaultFont", 14, "bold"),
-            padding=(16, 12),
+            font=("TkDefaultFont", 21, "bold"),
+            padding=(24, 18),
             foreground="white",
             background="#C24D00",
             borderwidth=1,
