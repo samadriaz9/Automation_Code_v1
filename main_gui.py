@@ -9,6 +9,7 @@ Features:
 import atexit
 import gc
 import glob
+import os
 import signal
 import sys
 import time
@@ -18,6 +19,20 @@ from tkinter import messagebox, ttk
 import cv2
 from PIL import Image, ImageDraw, ImageFont, ImageTk
 import RPi.GPIO as GPIO
+
+
+def _find_asset_path(filename, extra_candidates=None):
+    """Find asset by filename in project folder or provided candidates."""
+    candidates = [os.path.join(os.path.dirname(__file__), filename)]
+    if extra_candidates:
+        candidates.extend(extra_candidates)
+    for path in candidates:
+        try:
+            if path and os.path.exists(path):
+                return path
+        except Exception:
+            continue
+    return None
 
 
 def _rounded_button_photo(width, height, radius, bg_rgb, text, fg="#FFFFFF", font_size=18):
@@ -199,6 +214,11 @@ def open_usb_camera_with_recovery(
 class CameraTestWindow:
     def __init__(self, parent):
         self.win = tk.Toplevel(parent)
+        try:
+            if hasattr(parent, "_app_icon_photo") and parent._app_icon_photo is not None:
+                self.win.iconphoto(True, parent._app_icon_photo)
+        except Exception:
+            pass
         self.win.title("USB Camera Test")
         self.win.geometry("900x650")
         self.win.minsize(500, 350)
@@ -267,6 +287,9 @@ class ExperimentApp:
         except Exception:
             self.root.geometry(self._initial_geometry())
         self._setup_styles()
+        self._app_icon_photo = None
+        self._header_bg_photo = None
+        self._apply_app_icon(self.root)
 
         self.is_busy = False
         self.initialized = False
@@ -311,27 +334,43 @@ class ExperimentApp:
         outer.columnconfigure(0, weight=1)
         outer.rowconfigure(4, weight=1)
 
-        header = ttk.Frame(outer, style="Header.TFrame", padding=12)
+        header = tk.Frame(outer, bg="#113058", bd=0, highlightthickness=0)
         header.grid(row=0, column=0, sticky="ew", pady=(0, 8))
         header.columnconfigure(0, weight=1)
+        header.configure(height=120)
+        header.grid_propagate(False)
 
-        ttk.Label(
+        self._apply_header_background(header)
+
+        tk.Label(
             header,
             text="Automatic Microbial Detection System",
-            style="Title.TLabel",
+            bg="#113058",
+            fg="#F2F7FF",
+            font=("TkDefaultFont", 22, "bold"),
         ).grid(row=0, column=0, sticky="w")
-        ttk.Label(
+        tk.Label(
             header,
             text="Touch Control Console",
-            style="SubTitle.TLabel",
+            bg="#113058",
+            fg="#BFD3F2",
+            font=("TkDefaultFont", 14, "bold"),
         ).grid(row=1, column=0, sticky="w", pady=(2, 0))
 
-        self.btn_close = ttk.Button(
-            header,
-            text="Close",
-            command=self.on_exit,
-            style="Close.TButton",
+        close_img = _rounded_button_photo(
+            210, 84, 30, (194, 77, 0), "Close", font_size=30
         )
+        self.btn_close = tk.Button(
+            header,
+            image=close_img,
+            command=self.on_exit,
+            borderwidth=0,
+            highlightthickness=0,
+            cursor="hand2",
+            bg="#113058",
+            activebackground="#113058",
+        )
+        self.btn_close.image = close_img
         self.btn_close.grid(row=0, column=1, sticky="e", padx=(12, 0))
 
         # Push main action buttons down for easier thumb reach on 7" touch LCD.
@@ -451,16 +490,43 @@ class ExperimentApp:
             borderwidth=1,
         )
         style.map("ActionOrange.TButton", background=[("active", "#B45705")])
-        style.configure(
-            "Close.TButton",
-            font=("TkDefaultFont", 21, "bold"),
-            padding=(24, 18),
-            foreground="white",
-            background="#C24D00",
-            borderwidth=1,
-        )
-        style.map("Close.TButton", background=[("active", "#A54200")])
         style.configure("StepPopup.TButton", font=("TkDefaultFont", 13, "bold"), padding=(10, 12))
+
+    def _apply_app_icon(self, win):
+        """Load icon.png from project root and apply to a window."""
+        icon_path = _find_asset_path(
+            "icon.png",
+            extra_candidates=[
+                r"D:\office_project_data\automation_device\Automation_Code_v1\icon.png",
+            ],
+        )
+        if not icon_path:
+            return
+        try:
+            if self._app_icon_photo is None:
+                self._app_icon_photo = tk.PhotoImage(file=icon_path)
+            win.iconphoto(True, self._app_icon_photo)
+        except Exception:
+            pass
+
+    def _apply_header_background(self, header_frame):
+        """Apply background.png in the header region if present."""
+        bg_path = _find_asset_path(
+            "background.png",
+            extra_candidates=[
+                r"D:\office_project_data\automation_device\Automation_Code_v1\background.png",
+            ],
+        )
+        if not bg_path:
+            return
+        try:
+            src = Image.open(bg_path).convert("RGB")
+            banner = src.resize((1000, 120), Image.LANCZOS)
+            self._header_bg_photo = ImageTk.PhotoImage(banner)
+            bg_label = tk.Label(header_frame, image=self._header_bg_photo, bd=0, highlightthickness=0)
+            bg_label.place(x=0, y=0, relwidth=1, relheight=1)
+        except Exception:
+            pass
 
     def _run_with_gpio_retry(self, label, fn, *args, **kwargs):
         """Retry several times if GPIO allocation state is transiently invalid."""
@@ -539,6 +605,7 @@ class ExperimentApp:
         if self.is_busy:
             return
         popup = tk.Toplevel(self.root)
+        self._apply_app_icon(popup)
         popup.title("Run Experiment")
         popup.geometry("980x560")
         popup.minsize(900, 520)
@@ -594,6 +661,7 @@ class ExperimentApp:
         if self.is_busy:
             return
         popup = tk.Toplevel(self.root)
+        self._apply_app_icon(popup)
         popup.title("Incubation Profile Setup")
         popup.geometry("980x560")
         popup.minsize(900, 520)
@@ -915,6 +983,7 @@ class ExperimentApp:
         poll_seconds = 1.0
 
         win = tk.Toplevel(self.root)
+        self._apply_app_icon(win)
         win.title(f"{stage_name} Monitor")
         win.geometry("900x520")
         win.minsize(860, 480)
