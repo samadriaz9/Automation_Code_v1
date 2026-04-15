@@ -731,7 +731,6 @@ class ExperimentApp:
         outer.pack(fill=tk.BOTH, expand=True)
         outer.rowconfigure(0, weight=0)
         outer.rowconfigure(1, weight=1)
-        outer.rowconfigure(2, weight=0)
         outer.columnconfigure(0, weight=1)
 
         header = tk.Frame(outer, bg="#0F2C52", height=88)
@@ -757,8 +756,64 @@ class ExperimentApp:
             font=("TkDefaultFont", 13, "bold"),
         ).grid(row=1, column=1, sticky="nw", pady=(0, 10))
 
-        mid = tk.Frame(outer, bg="#E9EEF7")
-        mid.grid(row=1, column=0, sticky="nsew", padx=0, pady=0)
+        left_w = min(500, max(360, int(sw * 0.36)))
+        run_col_w = max(190, left_w - 190)
+
+        content = tk.Frame(outer, bg="#E9EEF7")
+        content.grid(row=1, column=0, sticky="nsew")
+        content.rowconfigure(0, weight=1)
+        content.columnconfigure(0, weight=0, minsize=left_w)
+        content.columnconfigure(1, weight=1)
+
+        left_panel = tk.Frame(content, bg="#CFD9EA", width=left_w)
+        left_panel.grid(row=0, column=0, sticky="nsew", padx=(0, 8), pady=0)
+        left_panel.columnconfigure(0, weight=1)
+        left_panel.columnconfigure(1, weight=0)
+
+        tk.Label(
+            left_panel,
+            text="Experiments",
+            bg="#CFD9EA",
+            fg="#0F2C52",
+            font=("TkDefaultFont", 16, "bold"),
+        ).grid(row=0, column=0, sticky="w", padx=14, pady=(12, 4))
+
+        tk.Label(
+            left_panel,
+            text="How many experiment runs to enable (1–5):",
+            bg="#CFD9EA",
+            fg="#1D3557",
+            font=("TkDefaultFont", 11, "bold"),
+        ).grid(row=1, column=0, columnspan=2, sticky="w", padx=14, pady=(4, 2))
+        run_count_var = tk.IntVar(value=5)
+        count_spin = tk.Spinbox(
+            left_panel,
+            from_=1,
+            to=5,
+            textvariable=run_count_var,
+            width=6,
+            font=("TkDefaultFont", 12, "bold"),
+            justify=tk.CENTER,
+        )
+        count_spin.grid(row=2, column=0, columnspan=2, sticky="w", padx=14, pady=(0, 8))
+
+        tk.Label(
+            left_panel,
+            text="Set delay (hours from now) next to each run button.",
+            bg="#CFD9EA",
+            fg="#1D3557",
+            font=("TkDefaultFont", 11, "bold"),
+        ).grid(row=3, column=0, columnspan=2, sticky="w", padx=14, pady=(6, 1))
+        tk.Label(
+            left_panel,
+            text="Minimum gap between consecutive run slots: 8 hours.",
+            bg="#CFD9EA",
+            fg="#3A5378",
+            font=("TkDefaultFont", 10, "bold"),
+        ).grid(row=4, column=0, columnspan=2, sticky="w", padx=14, pady=(0, 10))
+
+        mid = tk.Frame(content, bg="#E9EEF7")
+        mid.grid(row=0, column=1, sticky="nsew", padx=0, pady=0)
         mid.rowconfigure(0, weight=1)
         mid.columnconfigure(0, weight=1)
 
@@ -798,13 +853,96 @@ class ExperimentApp:
             font=("TkDefaultFont", 12, "bold"),
         ).grid(row=1, column=0, columnspan=3, sticky="w", padx=6, pady=(0, 10))
 
-        def _start_full_experiment():
+        def _close_popup():
+            try:
+                popup.attributes("-fullscreen", False)
+            except Exception:
+                pass
             popup.destroy()
-            self.root.after(50, self.run_all_steps)
 
-        def _placeholder_experiment_run():
-            """Reserved for future experiment profiles."""
-            pass
+        def _parse_hours(txt, field_name):
+            try:
+                v = float(str(txt).strip())
+            except Exception:
+                messagebox.showerror("Invalid input", f"{field_name} must be a number (hours).")
+                return None
+            if v < 0:
+                messagebox.showerror("Invalid input", f"{field_name} cannot be negative.")
+                return None
+            return v
+
+        run_delay_vars = [tk.StringVar(value="0"), tk.StringVar(value="8"), tk.StringVar(value="16"), tk.StringVar(value="24"), tk.StringVar(value="32")]
+
+        def _validate_run_slots(enabled_runs):
+            delays_h = []
+            for i in range(enabled_runs):
+                hv = _parse_hours(run_delay_vars[i].get(), f"Run {i + 1} delay")
+                if hv is None:
+                    return None
+                delays_h.append(hv)
+            for i in range(1, enabled_runs):
+                if delays_h[i] - delays_h[i - 1] < 8:
+                    messagebox.showerror(
+                        "Scheduling",
+                        f"Run {i + 1} must be at least 8 hours after Run {i}.",
+                    )
+                    return None
+            return delays_h
+
+        def _schedule_ms_for_run(k, enabled_runs):
+            delays_h = _validate_run_slots(enabled_runs)
+            if delays_h is None:
+                return None
+            return int(delays_h[k - 1] * 3600 * 1000)
+
+        def _tear_down_popup():
+            try:
+                popup.attributes("-fullscreen", False)
+            except Exception:
+                pass
+            try:
+                popup.destroy()
+            except Exception:
+                pass
+
+        def _on_run_k(k):
+            if self.is_busy:
+                messagebox.showinfo("Busy", "Finish the current operation before scheduling a run.")
+                return
+            try:
+                n = int(run_count_var.get())
+            except (tk.TclError, ValueError):
+                n = 5
+            n = max(1, min(5, n))
+            if k > n:
+                messagebox.showinfo(
+                    "Runs disabled",
+                    f'Increase "How many experiment runs" to at least {k} to use this button.',
+                )
+                return
+            ms = _schedule_ms_for_run(k, n)
+            if ms is None:
+                return
+            if k == 1:
+                _tear_down_popup()
+                if ms <= 0:
+                    self.root.after(50, self.run_all_steps)
+                else:
+                    self.write_log(f"Run 1st Experiment scheduled in {ms / 3600000.0:.2f} h.")
+                    self.root.after(ms, lambda: self.root.after(50, self.run_all_steps))
+            else:
+                _tear_down_popup()
+                delay_h = ms / 3600000.0
+                if ms <= 0:
+                    self.write_log(f"Run {k} Experiment — placeholder (profile not configured yet).")
+                else:
+                    self.write_log(f"Run {k} Experiment scheduled in {delay_h:.2f} h (placeholder).")
+                    self.root.after(
+                        ms,
+                        lambda kk=k: self.write_log(
+                            f"Run {kk} Experiment placeholder fired (no profile yet)."
+                        ),
+                    )
 
         for idx in range(15):
             step_no = idx + 1
@@ -837,29 +975,17 @@ class ExperimentApp:
         )
         combo_btn.grid(row=7, column=0, columnspan=3, sticky="ew", padx=6, pady=(12, 6))
 
-        bottom = tk.Frame(outer, bg="#CFD9EA")
-        bottom.grid(row=2, column=0, sticky="ew")
-        bottom.columnconfigure(0, weight=1)
-
-        def _close_popup():
-            try:
-                popup.attributes("-fullscreen", False)
-            except Exception:
-                pass
-            popup.destroy()
-
-        run_col_w = min(820, sw - 80)
-        run_btn_h = 68
-        run_radius = 22
-        run_font = 18
+        run_btn_h = 64
+        run_radius = 20
+        run_font = 16
 
         def _grid_run_button(btn, row_idx, top_pad=6):
-            btn.grid(row=row_idx, column=0, sticky="ew", padx=16, pady=(top_pad, 6))
+            btn.grid(row=row_idx, column=0, sticky="ew", padx=12, pady=(top_pad, 6))
 
         full_btn = _make_rounded_button(
-            bottom,
+            left_panel,
             "Run 1st Experiment",
-            _start_full_experiment,
+            lambda: _on_run_k(1),
             width=run_col_w,
             height=run_btn_h,
             radius=run_radius,
@@ -867,12 +993,15 @@ class ExperimentApp:
             font_size=run_font,
             parent_bg="#CFD9EA",
         )
-        _grid_run_button(full_btn, 0, top_pad=14)
+        _grid_run_button(full_btn, 8, top_pad=10)
+        tk.Entry(left_panel, textvariable=run_delay_vars[0], width=7, font=("TkDefaultFont", 12, "bold"), justify=tk.CENTER).grid(
+            row=8, column=1, sticky="e", padx=(6, 12), pady=(10, 6)
+        )
 
         run2 = _make_rounded_button(
-            bottom,
+            left_panel,
             "Run 2nd Experiment",
-            _placeholder_experiment_run,
+            lambda: _on_run_k(2),
             width=run_col_w,
             height=run_btn_h,
             radius=run_radius,
@@ -880,12 +1009,15 @@ class ExperimentApp:
             font_size=run_font,
             parent_bg="#CFD9EA",
         )
-        _grid_run_button(run2, 1)
+        _grid_run_button(run2, 9)
+        tk.Entry(left_panel, textvariable=run_delay_vars[1], width=7, font=("TkDefaultFont", 12, "bold"), justify=tk.CENTER).grid(
+            row=9, column=1, sticky="e", padx=(6, 12), pady=6
+        )
 
         run3 = _make_rounded_button(
-            bottom,
+            left_panel,
             "Run 3rd Experiment",
-            _placeholder_experiment_run,
+            lambda: _on_run_k(3),
             width=run_col_w,
             height=run_btn_h,
             radius=run_radius,
@@ -893,12 +1025,15 @@ class ExperimentApp:
             font_size=run_font,
             parent_bg="#CFD9EA",
         )
-        _grid_run_button(run3, 2)
+        _grid_run_button(run3, 10)
+        tk.Entry(left_panel, textvariable=run_delay_vars[2], width=7, font=("TkDefaultFont", 12, "bold"), justify=tk.CENTER).grid(
+            row=10, column=1, sticky="e", padx=(6, 12), pady=6
+        )
 
         run4 = _make_rounded_button(
-            bottom,
+            left_panel,
             "Run 4th Experiment",
-            _placeholder_experiment_run,
+            lambda: _on_run_k(4),
             width=run_col_w,
             height=run_btn_h,
             radius=run_radius,
@@ -906,12 +1041,15 @@ class ExperimentApp:
             font_size=run_font,
             parent_bg="#CFD9EA",
         )
-        _grid_run_button(run4, 3)
+        _grid_run_button(run4, 11)
+        tk.Entry(left_panel, textvariable=run_delay_vars[3], width=7, font=("TkDefaultFont", 12, "bold"), justify=tk.CENTER).grid(
+            row=11, column=1, sticky="e", padx=(6, 12), pady=6
+        )
 
         run5 = _make_rounded_button(
-            bottom,
+            left_panel,
             "Run 5th Experiment",
-            _placeholder_experiment_run,
+            lambda: _on_run_k(5),
             width=run_col_w,
             height=run_btn_h,
             radius=run_radius,
@@ -919,20 +1057,37 @@ class ExperimentApp:
             font_size=run_font,
             parent_bg="#CFD9EA",
         )
-        _grid_run_button(run5, 4)
+        _grid_run_button(run5, 12)
+        tk.Entry(left_panel, textvariable=run_delay_vars[4], width=7, font=("TkDefaultFont", 12, "bold"), justify=tk.CENTER).grid(
+            row=12, column=1, sticky="e", padx=(6, 12), pady=6
+        )
+
+        left_panel.rowconfigure(13, weight=1)
 
         close_exp = _make_rounded_button(
-            bottom,
+            left_panel,
             "Close Panel",
             _close_popup,
             width=run_col_w,
-            height=80,
-            radius=28,
+            height=72,
+            radius=26,
             bg_rgb=(194, 77, 0),
-            font_size=24,
+            font_size=20,
             parent_bg="#CFD9EA",
         )
-        close_exp.grid(row=5, column=0, sticky="ew", padx=16, pady=(12, 16))
+        close_exp.grid(row=14, column=0, columnspan=2, sticky="ew", padx=12, pady=(10, 14))
+
+        def _sync_run_buttons(*_args):
+            try:
+                n = int(run_count_var.get())
+            except (tk.TclError, ValueError):
+                n = 5
+            n = max(1, min(5, n))
+            for i, b in enumerate((full_btn, run2, run3, run4, run5), start=1):
+                b.config(state=tk.NORMAL if i <= n else tk.DISABLED)
+
+        run_count_var.trace_add("write", _sync_run_buttons)
+        _sync_run_buttons()
 
         popup.bind("<Escape>", lambda _e: _close_popup())
 
