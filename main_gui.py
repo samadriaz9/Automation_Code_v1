@@ -3,7 +3,7 @@ Tkinter GUI for automation workflow.
 
 Features:
 - Responsive main window for different screen sizes
-- Main screen: Run Experiment Steps, Test Camera (full run is inside the steps window)
+- Main screen: Run Experiment, Test Camera (full run is inside the experiment window)
 """
 
 import atexit
@@ -325,7 +325,7 @@ class ExperimentApp:
         btn_row.columnconfigure(1, weight=1)
 
         bw, bh, br = 440, 96, 22
-        ph_steps = _rounded_button_photo(bw, bh, br, (22, 98, 212), "Run Experiment Steps")
+        ph_steps = _rounded_button_photo(bw, bh, br, (22, 98, 212), "Run Experiment")
         ph_cam = _rounded_button_photo(bw, bh, br, (212, 106, 9), "Test Camera")
 
         self.btn_step = tk.Button(
@@ -489,7 +489,7 @@ class ExperimentApp:
         if self.is_busy:
             return
         popup = tk.Toplevel(self.root)
-        popup.title("Run Experiment Steps")
+        popup.title("Run Experiment")
         popup.geometry("980x560")
         popup.minsize(900, 520)
         popup.transient(self.root)
