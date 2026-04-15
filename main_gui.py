@@ -772,6 +772,8 @@ class ExperimentApp:
         left_panel.grid(row=0, column=0, sticky="nsew", padx=(0, 8), pady=0)
         left_panel.columnconfigure(0, weight=1)
         left_panel.columnconfigure(1, weight=0)
+        left_panel.columnconfigure(2, weight=0)
+        left_panel.columnconfigure(3, weight=0)
 
         tk.Label(
             left_panel,
@@ -903,6 +905,11 @@ class ExperimentApp:
                 return None
             return v
 
+        run_profiles = {i: [] for i in range(1, 6)}
+        profile_status_vars = {
+            i: tk.StringVar(value="Full run (default)") for i in range(1, 6)
+        }
+
         run_delay_vars = [
             tk.StringVar(value="0"),
             tk.StringVar(value="8"),
@@ -975,6 +982,141 @@ class ExperimentApp:
                 return None
             return int(delays_h[k - 1] * 3600 * 1000)
 
+        def _open_run_profile_editor(run_id):
+            prof_popup = tk.Toplevel(popup)
+            self._apply_app_icon(prof_popup)
+            prof_popup.title(f"Run {run_id} Profile Setup")
+            prof_popup.geometry("1020x620")
+            prof_popup.minsize(920, 560)
+            prof_popup.transient(popup)
+
+            frame = ttk.Frame(prof_popup, padding=12, style="App.TFrame")
+            frame.pack(fill=tk.BOTH, expand=True)
+            frame.columnconfigure(0, weight=1)
+            frame.columnconfigure(1, weight=1)
+            frame.columnconfigure(2, weight=1)
+            ttk.Label(frame, text="Stage", style="Status.TLabel").grid(
+                row=0, column=0, sticky="w", padx=6, pady=(4, 10)
+            )
+            ttk.Label(frame, text="Temperature (C)", style="Status.TLabel").grid(
+                row=0, column=1, sticky="w", padx=6, pady=(4, 10)
+            )
+            ttk.Label(frame, text="Incubation time before picture (min)", style="Status.TLabel").grid(
+                row=0, column=2, sticky="w", padx=6, pady=(4, 10)
+            )
+
+            temp_vars = []
+            time_vars = []
+            existing = run_profiles.get(run_id, [])
+
+            def _spinbox(parent, var, step, min_v, max_v, precision):
+                box = ttk.Frame(parent, style="App.TFrame")
+                box.columnconfigure(1, weight=1)
+
+                def _adjust(delta):
+                    try:
+                        value = float(var.get())
+                    except Exception:
+                        value = float(min_v)
+                    value = max(float(min_v), min(float(max_v), value + delta))
+                    var.set(f"{value:.{precision}f}" if precision > 0 else f"{int(round(value))}")
+
+                minus_btn = tk.Button(
+                    box,
+                    text="-",
+                    width=3,
+                    bg="#D85151",
+                    fg="white",
+                    activebackground="#C44141",
+                    font=("TkDefaultFont", 13, "bold"),
+                    command=lambda: _adjust(-step),
+                )
+                minus_btn.grid(row=0, column=0, padx=(0, 6))
+
+                value_lbl = tk.Label(
+                    box,
+                    textvariable=var,
+                    width=8,
+                    bg="#E8EEF8",
+                    fg="#1B2F4A",
+                    relief=tk.RIDGE,
+                    bd=2,
+                    font=("TkDefaultFont", 13, "bold"),
+                )
+                value_lbl.grid(row=0, column=1, sticky="ew")
+
+                plus_btn = tk.Button(
+                    box,
+                    text="+",
+                    width=3,
+                    bg="#1C8E56",
+                    fg="white",
+                    activebackground="#187A4A",
+                    font=("TkDefaultFont", 13, "bold"),
+                    command=lambda: _adjust(step),
+                )
+                plus_btn.grid(row=0, column=2, padx=(6, 0))
+                return box
+
+            for i in range(5):
+                stage_no = i + 1
+                if i < len(existing):
+                    t_default, m_default = existing[i]
+                    t_var = tk.StringVar(value=f"{float(t_default):.1f}")
+                    m_var = tk.StringVar(value=f"{int(round(float(m_default)))}")
+                else:
+                    t_var = tk.StringVar(value="37")
+                    m_var = tk.StringVar(value="1" if i == 0 else "0")
+                temp_vars.append(t_var)
+                time_vars.append(m_var)
+
+                ttk.Label(frame, text=f"Stage {stage_no}", style="Status.TLabel").grid(
+                    row=stage_no, column=0, sticky="w", padx=6, pady=8
+                )
+                _spinbox(frame, t_var, step=0.5, min_v=10.0, max_v=50.0, precision=1).grid(
+                    row=stage_no, column=1, sticky="w", padx=6, pady=8
+                )
+                _spinbox(frame, m_var, step=1, min_v=0, max_v=1440, precision=0).grid(
+                    row=stage_no, column=2, sticky="w", padx=6, pady=8
+                )
+
+            def _save_profile():
+                try:
+                    profiles = []
+                    for t_var, m_var in zip(temp_vars, time_vars):
+                        temp = float(t_var.get().strip())
+                        mins = float(m_var.get().strip())
+                        if mins > 0:
+                            profiles.append((temp, mins))
+                except Exception:
+                    messagebox.showerror(
+                        "Input Error",
+                        "Please enter valid numbers for temperatures and times.",
+                    )
+                    return
+
+                run_profiles[run_id] = profiles
+                if profiles:
+                    profile_status_vars[run_id].set(f"{len(profiles)} stage(s) configured")
+                else:
+                    profile_status_vars[run_id].set("Full run (default)")
+                prof_popup.destroy()
+
+            ttk.Label(
+                frame,
+                text="Each stage runs incubation (temp + time), then takes pictures.",
+                style="Status.TLabel",
+            ).grid(row=6, column=0, columnspan=3, sticky="w", padx=6, pady=(6, 2))
+
+            btn_save = _make_rounded_button(
+                frame, "Save Profile", _save_profile, 260, 72, 24, (12, 158, 94), font_size=22, parent_bg="#E9EEF7"
+            )
+            btn_save.grid(row=7, column=1, sticky="ew", pady=(12, 4), padx=6)
+            btn_cancel = _make_rounded_button(
+                frame, "Cancel", prof_popup.destroy, 260, 72, 24, (212, 106, 9), font_size=22, parent_bg="#E9EEF7"
+            )
+            btn_cancel.grid(row=7, column=2, sticky="ew", pady=(12, 4), padx=6)
+
         def _tear_down_popup():
             try:
                 popup.attributes("-fullscreen", False)
@@ -1003,25 +1145,39 @@ class ExperimentApp:
             ms = _schedule_ms_for_run(k, n)
             if ms is None:
                 return
+            selected_profile = list(run_profiles.get(k, []))
+
+            def _start_run_now(run_id, profile):
+                if profile:
+                    self.write_log(
+                        f"Run {run_id}: using configured profile with {len(profile)} stage(s)."
+                    )
+                    self.set_busy(True, f"Running experiment {run_id} profile...")
+                    self.root.after(
+                        10,
+                        lambda p=profile: self._run_incubate_and_picture_worker(p),
+                    )
+                else:
+                    self.write_log(f"Run {run_id}: using default full 15-step run.")
+                    self.root.after(50, self.run_all_steps)
+
             if k == 1:
                 _tear_down_popup()
                 if ms <= 0:
-                    self.root.after(50, self.run_all_steps)
+                    _start_run_now(k, selected_profile)
                 else:
                     self.write_log(f"Run 1st Experiment scheduled in {ms / 3600000.0:.2f} h.")
-                    self.root.after(ms, lambda: self.root.after(50, self.run_all_steps))
+                    self.root.after(ms, lambda rid=k, p=selected_profile: _start_run_now(rid, p))
             else:
                 _tear_down_popup()
                 delay_h = ms / 3600000.0
                 if ms <= 0:
-                    self.write_log(f"Run {k} Experiment — placeholder (profile not configured yet).")
+                    _start_run_now(k, selected_profile)
                 else:
-                    self.write_log(f"Run {k} Experiment scheduled in {delay_h:.2f} h (placeholder).")
+                    self.write_log(f"Run {k} Experiment scheduled in {delay_h:.2f} h.")
                     self.root.after(
                         ms,
-                        lambda kk=k: self.write_log(
-                            f"Run {kk} Experiment placeholder fired (no profile yet)."
-                        ),
+                        lambda rid=k, p=selected_profile: _start_run_now(rid, p),
                     )
 
         def _start_experiment_sequence():
@@ -1047,7 +1203,19 @@ class ExperimentApp:
                     self.root.after(60000, lambda ri=run_index: _run_sequence_item(ri))
                     return
                 self.write_log(f"Starting Run {run_index} Experiment.")
-                self.root.after(50, self.run_all_steps)
+                selected_profile = list(run_profiles.get(run_index, []))
+                if selected_profile:
+                    self.write_log(
+                        f"Run {run_index}: using configured profile with {len(selected_profile)} stage(s)."
+                    )
+                    self.set_busy(True, f"Running experiment {run_index} profile...")
+                    self.root.after(
+                        10,
+                        lambda p=selected_profile: self._run_incubate_and_picture_worker(p),
+                    )
+                else:
+                    self.write_log(f"Run {run_index}: using default full 15-step run.")
+                    self.root.after(50, self.run_all_steps)
 
             _tear_down_popup()
             for i in range(n):
@@ -1112,6 +1280,23 @@ class ExperimentApp:
         )
         _grid_run_button(full_btn, 8, top_pad=10)
         _make_delay_slot(8, run_delay_vars[0], top_pad=10)
+        tk.Label(
+            left_panel,
+            textvariable=profile_status_vars[1],
+            bg="#CFD9EA",
+            fg="#1D3557",
+            font=("TkDefaultFont", 10, "bold"),
+        ).grid(row=8, column=2, sticky="w", padx=(6, 4), pady=(10, 6))
+        tk.Button(
+            left_panel,
+            text="Profile",
+            command=lambda: _open_run_profile_editor(1),
+            width=8,
+            height=2,
+            bg="#D9E2F2",
+            activebackground="#C8D6EE",
+            font=("TkDefaultFont", 11, "bold"),
+        ).grid(row=8, column=3, sticky="e", padx=(4, 12), pady=(10, 6))
 
         run2 = _make_rounded_button(
             left_panel,
@@ -1126,6 +1311,23 @@ class ExperimentApp:
         )
         _grid_run_button(run2, 9)
         _make_delay_slot(9, run_delay_vars[1])
+        tk.Label(
+            left_panel,
+            textvariable=profile_status_vars[2],
+            bg="#CFD9EA",
+            fg="#1D3557",
+            font=("TkDefaultFont", 10, "bold"),
+        ).grid(row=9, column=2, sticky="w", padx=(6, 4), pady=6)
+        tk.Button(
+            left_panel,
+            text="Profile",
+            command=lambda: _open_run_profile_editor(2),
+            width=8,
+            height=2,
+            bg="#D9E2F2",
+            activebackground="#C8D6EE",
+            font=("TkDefaultFont", 11, "bold"),
+        ).grid(row=9, column=3, sticky="e", padx=(4, 12), pady=6)
 
         run3 = _make_rounded_button(
             left_panel,
@@ -1140,6 +1342,23 @@ class ExperimentApp:
         )
         _grid_run_button(run3, 10)
         _make_delay_slot(10, run_delay_vars[2])
+        tk.Label(
+            left_panel,
+            textvariable=profile_status_vars[3],
+            bg="#CFD9EA",
+            fg="#1D3557",
+            font=("TkDefaultFont", 10, "bold"),
+        ).grid(row=10, column=2, sticky="w", padx=(6, 4), pady=6)
+        tk.Button(
+            left_panel,
+            text="Profile",
+            command=lambda: _open_run_profile_editor(3),
+            width=8,
+            height=2,
+            bg="#D9E2F2",
+            activebackground="#C8D6EE",
+            font=("TkDefaultFont", 11, "bold"),
+        ).grid(row=10, column=3, sticky="e", padx=(4, 12), pady=6)
 
         run4 = _make_rounded_button(
             left_panel,
@@ -1154,6 +1373,23 @@ class ExperimentApp:
         )
         _grid_run_button(run4, 11)
         _make_delay_slot(11, run_delay_vars[3])
+        tk.Label(
+            left_panel,
+            textvariable=profile_status_vars[4],
+            bg="#CFD9EA",
+            fg="#1D3557",
+            font=("TkDefaultFont", 10, "bold"),
+        ).grid(row=11, column=2, sticky="w", padx=(6, 4), pady=6)
+        tk.Button(
+            left_panel,
+            text="Profile",
+            command=lambda: _open_run_profile_editor(4),
+            width=8,
+            height=2,
+            bg="#D9E2F2",
+            activebackground="#C8D6EE",
+            font=("TkDefaultFont", 11, "bold"),
+        ).grid(row=11, column=3, sticky="e", padx=(4, 12), pady=6)
 
         run5 = _make_rounded_button(
             left_panel,
@@ -1168,6 +1404,23 @@ class ExperimentApp:
         )
         _grid_run_button(run5, 12)
         _make_delay_slot(12, run_delay_vars[4])
+        tk.Label(
+            left_panel,
+            textvariable=profile_status_vars[5],
+            bg="#CFD9EA",
+            fg="#1D3557",
+            font=("TkDefaultFont", 10, "bold"),
+        ).grid(row=12, column=2, sticky="w", padx=(6, 4), pady=6)
+        tk.Button(
+            left_panel,
+            text="Profile",
+            command=lambda: _open_run_profile_editor(5),
+            width=8,
+            height=2,
+            bg="#D9E2F2",
+            activebackground="#C8D6EE",
+            font=("TkDefaultFont", 11, "bold"),
+        ).grid(row=12, column=3, sticky="e", padx=(4, 12), pady=6)
 
         start_sequence_btn = _make_rounded_button(
             left_panel,
@@ -1567,6 +1820,14 @@ class ExperimentApp:
     def step_1(self):
         self.write_log("Step 1: All Module Home")
         Media_dispensor_home()
+        incubator_lid_home()
+        suction_pipe_home()
+        filteration_unit_config()
+        filteration_flask_config()
+        petri_dishes_home()
+        petri_dishes_down(1035)
+        suction_pump_home()
+        suction_pump_up(400)
 
     def step_2(self):
         self.write_log("Step 2: Change media")
