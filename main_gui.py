@@ -1561,13 +1561,16 @@ class ExperimentApp:
     def _run_incubate_and_picture_worker(self, profiles):
         try:
             self.write_log("Running combined flow: Shift -> Incubate -> Picture")
+            exp_dir = self._create_next_experiment_dir(".")
+            self.write_log(f"Experiment image root: {exp_dir}")
             for idx, (target_temp, minutes) in enumerate(profiles, start=1):
                 self.write_log(f"Stage {idx}: shift to incubation region")
                 self.step_11()
                 self.write_log(f"Stage {idx}: incubate at {target_temp:.1f}C for {minutes:.2f} min")
                 self._run_incubation(target_temp, minutes, stage_name=f"Stage {idx}")
                 self.write_log(f"Stage {idx}: incubation complete, starting pictures")
-                self.step_13()
+                stage_folder = self._stage_capture_folder_name(target_temp, minutes)
+                self.step_13(experiment_dir=exp_dir, stage_subdir=stage_folder)
             self.write_log("Final: returning incubator and stage home")
             incubator_lid_home()
             petri_dishes_home()
@@ -1587,6 +1590,31 @@ class ExperimentApp:
         except Exception as exc:
             self.write_log(f"ERROR: {exc}")
             self.root.after(0, lambda: self.set_busy(False, "Error occurred. Check log."))
+
+    def _create_next_experiment_dir(self, output_root="."):
+        os.makedirs(output_root, exist_ok=True)
+        idx = 1
+        while True:
+            path = os.path.join(output_root, f"exp_{idx:02d}")
+            if not os.path.exists(path):
+                os.makedirs(path, exist_ok=False)
+                return path
+            idx += 1
+
+    def _stage_capture_folder_name(self, target_temp, minutes):
+        hours = float(minutes) / 60.0
+        temp = float(target_temp)
+        if abs(hours - round(hours)) < 1e-6:
+            h_txt = str(int(round(hours)))
+        else:
+            h_txt = f"{hours:.1f}".rstrip("0").rstrip(".")
+        if abs(temp - round(temp)) < 1e-6:
+            t_txt = str(int(round(temp)))
+        else:
+            t_txt = f"{temp:.1f}".rstrip("0").rstrip(".")
+        safe_h = h_txt.replace(".", "p")
+        safe_t = t_txt.replace(".", "p")
+        return f"{safe_h}hours{safe_t}degree"
 
     def run_all_steps(self):
         if self.is_busy:
@@ -2062,7 +2090,7 @@ class ExperimentApp:
                     pass
         return None
 
-    def step_13(self):
+    def step_13(self, experiment_dir=None, stage_subdir=None):
         self.write_log("Step 13: Start pictures")
         cam_idx = self._detect_camera_index()
         if cam_idx is None:
@@ -2095,7 +2123,11 @@ class ExperimentApp:
         imaging_errors = []
         for try_no in range(1, 4):
             try:
-                start_imaging_capture_pattern(camera_device_index=cam_idx)
+                start_imaging_capture_pattern(
+                    camera_device_index=cam_idx,
+                    experiment_dir=experiment_dir,
+                    stage_subdir=stage_subdir,
+                )
                 imaging_ok = True
                 break
             except Exception as exc:

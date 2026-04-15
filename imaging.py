@@ -221,6 +221,8 @@ def _write_mosaic(output_dir, mosaic, mosaic_name):
 
 def start_imaging_capture_pattern(
     output_root=".",
+    experiment_dir=None,
+    stage_subdir=None,
     camera_device_index=0,
     rows=7,
     cols=7,
@@ -257,7 +259,11 @@ def start_imaging_capture_pattern(
     Returns:
         output_dir path containing captured images.
     """
-    output_dir = _next_exp_dir(output_root)
+    if experiment_dir:
+        base_dir = _ensure_dir(experiment_dir)
+    else:
+        base_dir = _next_exp_dir(output_root)
+    output_dir = _ensure_dir(os.path.join(base_dir, stage_subdir)) if stage_subdir else base_dir
 
     idx = int(camera_device_index)
     if sys.platform.startswith("linux"):
