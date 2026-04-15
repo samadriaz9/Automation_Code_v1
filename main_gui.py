@@ -719,27 +719,60 @@ class ExperimentApp:
         popup.title("Run Experiment")
         sw = self.root.winfo_screenwidth()
         sh = self.root.winfo_screenheight()
-        popup.geometry(f"{sw}x{sh}+0+0")
-        popup.minsize(min(900, sw), min(520, sh))
-        popup.transient(self.root)
+        try:
+            popup.attributes("-fullscreen", True)
+        except Exception:
+            popup.geometry(f"{sw}x{sh}+0+0")
+        popup.minsize(min(800, sw), min(480, sh))
+        popup.lift()
+        popup.focus_force()
 
         outer = tk.Frame(popup, bg="#E9EEF7")
         outer.pack(fill=tk.BOTH, expand=True)
-        outer.rowconfigure(0, weight=1)
-        outer.rowconfigure(1, weight=0)
+        outer.rowconfigure(0, weight=0)
+        outer.rowconfigure(1, weight=1)
+        outer.rowconfigure(2, weight=0)
         outer.columnconfigure(0, weight=1)
 
-        canvas = tk.Canvas(outer, bg="#E9EEF7", highlightthickness=0)
-        vsb = ttk.Scrollbar(outer, orient=tk.VERTICAL, command=canvas.yview)
+        header = tk.Frame(outer, bg="#0F2C52", height=88)
+        header.grid(row=0, column=0, sticky="ew")
+        header.grid_propagate(False)
+        header.columnconfigure(1, weight=1)
+        if getattr(self, "_title_icon_photo", None) is not None:
+            tk.Label(header, image=self._title_icon_photo, bg="#0F2C52").grid(
+                row=0, column=0, rowspan=2, padx=(14, 8), pady=10, sticky="nw"
+            )
+        tk.Label(
+            header,
+            text="Experiment Control Panel",
+            bg="#0F2C52",
+            fg="#F2F7FF",
+            font=("TkDefaultFont", 20, "bold"),
+        ).grid(row=0, column=1, sticky="nw", pady=(10, 0))
+        tk.Label(
+            header,
+            text="Automatic Microbial Detection System",
+            bg="#0F2C52",
+            fg="#BFD3F2",
+            font=("TkDefaultFont", 13, "bold"),
+        ).grid(row=1, column=1, sticky="nw", pady=(0, 10))
+
+        mid = tk.Frame(outer, bg="#E9EEF7")
+        mid.grid(row=1, column=0, sticky="nsew", padx=0, pady=0)
+        mid.rowconfigure(0, weight=1)
+        mid.columnconfigure(0, weight=1)
+
+        canvas = tk.Canvas(mid, bg="#E9EEF7", highlightthickness=0)
+        vsb = ttk.Scrollbar(mid, orient=tk.VERTICAL, command=canvas.yview)
         canvas.configure(yscrollcommand=vsb.set)
         canvas.grid(row=0, column=0, sticky="nsew")
         vsb.grid(row=0, column=1, sticky="ns")
 
-        wrapper = ttk.Frame(canvas, padding=10, style="App.TFrame")
+        wrapper = ttk.Frame(canvas, padding=12, style="App.TFrame")
         win_id = canvas.create_window((0, 0), window=wrapper, anchor="nw")
 
         def _on_canvas_configure(event):
-            canvas.itemconfigure(win_id, width=event.width)
+            canvas.itemconfigure(win_id, width=max(1, event.width - 4))
 
         def _on_wrapper_configure(_event=None):
             canvas.configure(scrollregion=canvas.bbox("all"))
@@ -750,6 +783,14 @@ class ExperimentApp:
         for c in range(3):
             wrapper.columnconfigure(c, weight=1)
 
+        tk.Label(
+            wrapper,
+            text="Actions",
+            background="#E9EEF7",
+            foreground="#1D3557",
+            font=("TkDefaultFont", 15, "bold"),
+        ).grid(row=0, column=0, columnspan=3, sticky="w", padx=6, pady=(0, 6))
+
         def _start_full_experiment():
             popup.destroy()
             self.root.after(50, self.run_all_steps)
@@ -758,14 +799,14 @@ class ExperimentApp:
             wrapper,
             "Run Full Experiment (all 15 steps, 2 s between steps)",
             _start_full_experiment,
-            width=min(900, sw - 80),
+            width=min(900, sw - 100),
             height=72,
             radius=24,
             bg_rgb=(12, 158, 94),
             font_size=20,
             parent_bg="#E9EEF7",
         )
-        full_btn.grid(row=0, column=0, columnspan=3, sticky="ew", padx=6, pady=(0, 10))
+        full_btn.grid(row=1, column=0, columnspan=3, sticky="ew", padx=6, pady=(0, 10))
 
         for idx in range(15):
             step_no = idx + 1
@@ -774,14 +815,14 @@ class ExperimentApp:
                 wrapper,
                 label,
                 lambda n=step_no: self.run_specific_step(n),
-                width=min(300, (sw - 120) // 3),
+                width=min(300, max(200, (sw - 140) // 3)),
                 height=62,
                 radius=18,
                 bg_rgb=(22, 98, 212),
                 font_size=16,
                 parent_bg="#E9EEF7",
             )
-            r = 1 + idx // 3
+            r = 2 + idx // 3
             c = idx % 3
             btn.grid(row=r, column=c, sticky="ew", padx=6, pady=6)
 
@@ -789,31 +830,41 @@ class ExperimentApp:
             wrapper,
             "Incubate + Pictures",
             self.run_incubate_and_picture_flow,
-            width=min(900, sw - 80),
+            width=min(900, sw - 100),
             height=72,
             radius=24,
             bg_rgb=(22, 98, 212),
             font_size=22,
             parent_bg="#E9EEF7",
         )
-        combo_btn.grid(row=6, column=0, columnspan=3, sticky="ew", padx=6, pady=(12, 6))
+        combo_btn.grid(row=7, column=0, columnspan=3, sticky="ew", padx=6, pady=(12, 6))
 
-        bottom = tk.Frame(outer, bg="#E9EEF7")
-        bottom.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(8, 10))
+        bottom = tk.Frame(outer, bg="#CFD9EA", height=110)
+        bottom.grid(row=2, column=0, sticky="ew")
+        bottom.grid_propagate(False)
         bottom.columnconfigure(0, weight=1)
+
+        def _close_popup():
+            try:
+                popup.attributes("-fullscreen", False)
+            except Exception:
+                pass
+            popup.destroy()
 
         close_exp = _make_rounded_button(
             bottom,
-            "Close",
-            popup.destroy,
-            width=min(420, sw - 120),
-            height=76,
-            radius=26,
-            bg_rgb=(212, 106, 9),
+            "Close Panel",
+            _close_popup,
+            width=min(480, sw - 100),
+            height=80,
+            radius=28,
+            bg_rgb=(194, 77, 0),
             font_size=24,
-            parent_bg="#E9EEF7",
+            parent_bg="#CFD9EA",
         )
-        close_exp.grid(row=0, column=0, pady=4)
+        close_exp.grid(row=0, column=0, pady=14)
+
+        popup.bind("<Escape>", lambda _e: _close_popup())
 
     def run_specific_step(self, step_no):
         if self.is_busy:
