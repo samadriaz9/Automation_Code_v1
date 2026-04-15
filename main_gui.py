@@ -109,6 +109,7 @@ from media_dispensor import (
     Media_dispensor_home,
     Media_dispensor_up,
     Media_dispensor_down,
+    media_dispensor_home_pressed,
     cleanup as media_dispensor_cleanup,
 )
 from petri_dishes import (
@@ -1237,6 +1238,7 @@ class ExperimentApp:
         consumable_steps = [2, 3]  # Change Media, Adjust Syringe
         for i, step_no in enumerate(consumable_steps):
             label = self.step_labels[step_no - 1]
+            consumable_color = (212, 126, 18) if step_no == 2 else (146, 72, 198)
             btn = _make_rounded_button(
                 wrapper,
                 label,
@@ -1244,11 +1246,38 @@ class ExperimentApp:
                 width=step_btn_w,
                 height=62,
                 radius=18,
-                bg_rgb=(22, 98, 212),
+                bg_rgb=consumable_color,
                 font_size=16,
                 parent_bg="#E9EEF7",
             )
             btn.grid(row=section_row, column=i, sticky="ew", padx=6, pady=6)
+        section_row += 1
+
+        insert_media_var = tk.StringVar(value="")
+        tk.Label(
+            wrapper,
+            textvariable=insert_media_var,
+            background="#E9EEF7",
+            foreground="#0E7A47",
+            font=("TkDefaultFont", 15, "bold"),
+        ).grid(row=section_row, column=0, columnspan=3, sticky="w", padx=6, pady=(0, 6))
+
+        def _refresh_insert_media_label():
+            try:
+                if not popup.winfo_exists():
+                    return
+            except Exception:
+                return
+            try:
+                if media_dispensor_home_pressed():
+                    insert_media_var.set("Insert Media")
+                else:
+                    insert_media_var.set("")
+            except Exception:
+                insert_media_var.set("")
+            popup.after(500, _refresh_insert_media_label)
+
+        _refresh_insert_media_label()
         section_row += 1
 
         tk.Label(

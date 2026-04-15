@@ -49,6 +49,16 @@ def _read_p5():
     return (value >> 5) & 0x01  # bit 5 = P5
 
 
+def media_dispensor_home_pressed():
+    """Return True when the media dispenser home limit switch is pressed."""
+    try:
+        p5 = _read_p5()
+        # Keep consistent with current homing logic in Media_dispensor_home().
+        return p5 == 1
+    except Exception:
+        return False
+
+
 def _step(steps, direction_high):
     """Run a given number of steps in one direction."""
     _ensure_gpio()
