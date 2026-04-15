@@ -3,10 +3,7 @@ Tkinter GUI for automation workflow.
 
 Features:
 - Responsive main window for different screen sizes
-- Three primary actions:
-  1) Run Experiment Steps (one step per click)
-  2) Run Experiment (all 15 steps with 2s delay between steps)
-  3) Test Camera (USB preview with Close button)
+- Main screen: Run Experiment Steps, Test Camera (full run is inside the steps window)
 """
 
 import atexit
@@ -19,8 +16,37 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 
 import cv2
-from PIL import Image, ImageTk
+from PIL import Image, ImageDraw, ImageFont, ImageTk
 import RPi.GPIO as GPIO
+
+
+def _rounded_button_photo(width, height, radius, bg_rgb, text, fg="#FFFFFF", font_size=18):
+    """PIL image for a large rounded-corner touch button (keep reference on widget)."""
+    img = Image.new("RGBA", (int(width), int(height)), (0, 0, 0, 0))
+    dr = ImageDraw.Draw(img)
+    rect = (0, 0, width - 1, height - 1)
+    try:
+        dr.rounded_rectangle(rect, radius=int(radius), fill=bg_rgb)
+    except AttributeError:
+        dr.rectangle(rect, fill=bg_rgb)
+    font = None
+    for path in (
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+    ):
+        try:
+            font = ImageFont.truetype(path, int(font_size))
+            break
+        except Exception:
+            continue
+    if font is None:
+        font = ImageFont.load_default()
+    bbox = dr.textbbox((0, 0), text, font=font)
+    tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
+    tx = max(0, (width - tw) // 2)
+    ty = max(0, (height - th) // 2 - 2)
+    dr.text((tx, ty), text, fill=fg, font=font)
+    return ImageTk.PhotoImage(img)
 
 from camera_module import Camera_home, Camera_down, cleanup as camera_cleanup
 from filteration_flask import (
@@ -280,46 +306,57 @@ class ExperimentApp:
         outer = ttk.Frame(root, padding=10, style="App.TFrame")
         outer.pack(fill=tk.BOTH, expand=True)
         outer.columnconfigure(0, weight=1)
-        outer.rowconfigure(2, weight=1)
+        outer.rowconfigure(3, weight=1)
 
         ttk.Label(
             outer,
             text="Automation Device - Main GUI",
             style="Title.TLabel",
-        ).grid(row=0, column=0, sticky="w", pady=(0, 8))
+        ).grid(row=0, column=0, sticky="w", pady=(0, 4))
+
+        # Push main action buttons down for easier thumb reach on 7" touch LCD.
+        spacer = ttk.Frame(outer, style="App.TFrame", height=36)
+        spacer.grid(row=1, column=0, sticky="ew")
+        spacer.grid_propagate(False)
 
         btn_row = ttk.Frame(outer, style="App.TFrame")
-        btn_row.grid(row=1, column=0, sticky="ew", pady=(0, 10))
-        for i in range(3):
-            btn_row.columnconfigure(i, weight=1)
+        btn_row.grid(row=2, column=0, sticky="ew", pady=(18, 12))
+        btn_row.columnconfigure(0, weight=1)
+        btn_row.columnconfigure(1, weight=1)
 
-        self.btn_step = ttk.Button(
+        bw, bh, br = 440, 96, 22
+        ph_steps = _rounded_button_photo(bw, bh, br, (22, 98, 212), "Run Experiment Steps")
+        ph_cam = _rounded_button_photo(bw, bh, br, (212, 106, 9), "Test Camera")
+
+        self.btn_step = tk.Button(
             btn_row,
-            text="Run Experiment Steps",
+            image=ph_steps,
             command=self.open_step_popup,
-            style="ActionBlue.TButton",
+            borderwidth=0,
+            highlightthickness=0,
+            cursor="hand2",
+            bg="#F3F6FB",
+            activebackground="#F3F6FB",
         )
-        self.btn_step.grid(row=0, column=0, sticky="ew", padx=(0, 8))
+        self.btn_step.image = ph_steps
+        self.btn_step.grid(row=0, column=0, sticky="ew", padx=(0, 10))
 
-        self.btn_all = ttk.Button(
+        self.btn_camera = tk.Button(
             btn_row,
-            text="Run Experiment",
-            command=self.run_all_steps,
-            style="ActionGreen.TButton",
-        )
-        self.btn_all.grid(row=0, column=1, sticky="ew", padx=4)
-
-        self.btn_camera = ttk.Button(
-            btn_row,
-            text="Test Camera",
+            image=ph_cam,
             command=self.open_camera_test,
-            style="ActionOrange.TButton",
+            borderwidth=0,
+            highlightthickness=0,
+            cursor="hand2",
+            bg="#F3F6FB",
+            activebackground="#F3F6FB",
         )
-        self.btn_camera.grid(row=0, column=2, sticky="ew", padx=(8, 0))
+        self.btn_camera.image = ph_cam
+        self.btn_camera.grid(row=0, column=1, sticky="ew", padx=(10, 0))
 
         self.status_var = tk.StringVar(value="Ready.")
         ttk.Label(outer, textvariable=self.status_var, style="Status.TLabel").grid(
-            row=3, column=0, sticky="w", pady=(6, 0)
+            row=4, column=0, sticky="w", pady=(6, 0)
         )
 
         self.log = tk.Text(
@@ -334,7 +371,7 @@ class ExperimentApp:
             padx=8,
             pady=8,
         )
-        self.log.grid(row=2, column=0, sticky="nsew")
+        self.log.grid(row=3, column=0, sticky="nsew")
         self._incubation_stop_requested = False
 
     def _setup_styles(self):
@@ -424,7 +461,6 @@ class ExperimentApp:
         self.is_busy = busy
         state = tk.DISABLED if busy else tk.NORMAL
         self.btn_step.config(state=state)
-        self.btn_all.config(state=state)
         self.btn_camera.config(state=state)
         self.status_var.set(status_text)
 
@@ -463,6 +499,18 @@ class ExperimentApp:
         for c in range(3):
             wrapper.columnconfigure(c, weight=1)
 
+        def _start_full_experiment():
+            popup.destroy()
+            self.root.after(50, self.run_all_steps)
+
+        full_btn = ttk.Button(
+            wrapper,
+            text="Run Full Experiment (all 15 steps, 2 s between steps)",
+            command=_start_full_experiment,
+            style="ActionGreen.TButton",
+        )
+        full_btn.grid(row=0, column=0, columnspan=3, sticky="ew", padx=6, pady=(0, 10))
+
         for idx in range(15):
             step_no = idx + 1
             label = self.step_labels[idx]
@@ -472,7 +520,7 @@ class ExperimentApp:
                 command=lambda n=step_no: self.run_specific_step(n),
                 style="StepPopup.TButton",
             )
-            r = idx // 3
+            r = 1 + idx // 3
             c = idx % 3
             btn.grid(row=r, column=c, sticky="ew", padx=6, pady=6)
 
@@ -482,7 +530,7 @@ class ExperimentApp:
             command=self.run_incubate_and_picture_flow,
             style="ActionBlue.TButton",
         )
-        combo_btn.grid(row=5, column=0, columnspan=3, sticky="ew", padx=6, pady=(12, 6))
+        combo_btn.grid(row=6, column=0, columnspan=3, sticky="ew", padx=6, pady=(12, 6))
 
     def run_specific_step(self, step_no):
         if self.is_busy:
