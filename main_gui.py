@@ -906,9 +906,6 @@ class ExperimentApp:
             return v
 
         run_profiles = {i: [] for i in range(1, 6)}
-        profile_status_vars = {
-            i: tk.StringVar(value="Full run (default)") for i in range(1, 6)
-        }
 
         run_delay_vars = [
             tk.StringVar(value="0"),
@@ -1096,10 +1093,6 @@ class ExperimentApp:
                     return
 
                 run_profiles[run_id] = profiles
-                if profiles:
-                    profile_status_vars[run_id].set(f"{len(profiles)} stage(s) configured")
-                else:
-                    profile_status_vars[run_id].set("Full run (default)")
                 prof_popup.destroy()
 
             ttk.Label(
@@ -1280,23 +1273,18 @@ class ExperimentApp:
         )
         _grid_run_button(full_btn, 8, top_pad=10)
         _make_delay_slot(8, run_delay_vars[0], top_pad=10)
-        tk.Label(
+        profile_btn_1 = _make_rounded_button(
             left_panel,
-            textvariable=profile_status_vars[1],
-            bg="#CFD9EA",
-            fg="#1D3557",
-            font=("TkDefaultFont", 10, "bold"),
-        ).grid(row=8, column=2, sticky="w", padx=(6, 4), pady=(10, 6))
-        tk.Button(
-            left_panel,
-            text="Profile",
-            command=lambda: _open_run_profile_editor(1),
-            width=8,
-            height=2,
-            bg="#D9E2F2",
-            activebackground="#C8D6EE",
-            font=("TkDefaultFont", 11, "bold"),
-        ).grid(row=8, column=3, sticky="e", padx=(4, 12), pady=(10, 6))
+            "Profile",
+            lambda: _open_run_profile_editor(1),
+            width=160,
+            height=72,
+            radius=22,
+            bg_rgb=(92, 122, 201),
+            font_size=16,
+            parent_bg="#CFD9EA",
+        )
+        profile_btn_1.grid(row=8, column=2, columnspan=2, sticky="ew", padx=(6, 12), pady=(10, 6))
 
         run2 = _make_rounded_button(
             left_panel,
@@ -1311,23 +1299,18 @@ class ExperimentApp:
         )
         _grid_run_button(run2, 9)
         _make_delay_slot(9, run_delay_vars[1])
-        tk.Label(
+        profile_btn_2 = _make_rounded_button(
             left_panel,
-            textvariable=profile_status_vars[2],
-            bg="#CFD9EA",
-            fg="#1D3557",
-            font=("TkDefaultFont", 10, "bold"),
-        ).grid(row=9, column=2, sticky="w", padx=(6, 4), pady=6)
-        tk.Button(
-            left_panel,
-            text="Profile",
-            command=lambda: _open_run_profile_editor(2),
-            width=8,
-            height=2,
-            bg="#D9E2F2",
-            activebackground="#C8D6EE",
-            font=("TkDefaultFont", 11, "bold"),
-        ).grid(row=9, column=3, sticky="e", padx=(4, 12), pady=6)
+            "Profile",
+            lambda: _open_run_profile_editor(2),
+            width=160,
+            height=72,
+            radius=22,
+            bg_rgb=(92, 122, 201),
+            font_size=16,
+            parent_bg="#CFD9EA",
+        )
+        profile_btn_2.grid(row=9, column=2, columnspan=2, sticky="ew", padx=(6, 12), pady=6)
 
         run3 = _make_rounded_button(
             left_panel,
@@ -1342,23 +1325,18 @@ class ExperimentApp:
         )
         _grid_run_button(run3, 10)
         _make_delay_slot(10, run_delay_vars[2])
-        tk.Label(
+        profile_btn_3 = _make_rounded_button(
             left_panel,
-            textvariable=profile_status_vars[3],
-            bg="#CFD9EA",
-            fg="#1D3557",
-            font=("TkDefaultFont", 10, "bold"),
-        ).grid(row=10, column=2, sticky="w", padx=(6, 4), pady=6)
-        tk.Button(
-            left_panel,
-            text="Profile",
-            command=lambda: _open_run_profile_editor(3),
-            width=8,
-            height=2,
-            bg="#D9E2F2",
-            activebackground="#C8D6EE",
-            font=("TkDefaultFont", 11, "bold"),
-        ).grid(row=10, column=3, sticky="e", padx=(4, 12), pady=6)
+            "Profile",
+            lambda: _open_run_profile_editor(3),
+            width=160,
+            height=72,
+            radius=22,
+            bg_rgb=(92, 122, 201),
+            font_size=16,
+            parent_bg="#CFD9EA",
+        )
+        profile_btn_3.grid(row=10, column=2, columnspan=2, sticky="ew", padx=(6, 12), pady=6)
 
         run4 = _make_rounded_button(
             left_panel,
@@ -1373,23 +1351,18 @@ class ExperimentApp:
         )
         _grid_run_button(run4, 11)
         _make_delay_slot(11, run_delay_vars[3])
-        tk.Label(
+        profile_btn_4 = _make_rounded_button(
             left_panel,
-            textvariable=profile_status_vars[4],
-            bg="#CFD9EA",
-            fg="#1D3557",
-            font=("TkDefaultFont", 10, "bold"),
-        ).grid(row=11, column=2, sticky="w", padx=(6, 4), pady=6)
-        tk.Button(
-            left_panel,
-            text="Profile",
-            command=lambda: _open_run_profile_editor(4),
-            width=8,
-            height=2,
-            bg="#D9E2F2",
-            activebackground="#C8D6EE",
-            font=("TkDefaultFont", 11, "bold"),
-        ).grid(row=11, column=3, sticky="e", padx=(4, 12), pady=6)
+            "Profile",
+            lambda: _open_run_profile_editor(4),
+            width=160,
+            height=72,
+            radius=22,
+            bg_rgb=(92, 122, 201),
+            font_size=16,
+            parent_bg="#CFD9EA",
+        )
+        profile_btn_4.grid(row=11, column=2, columnspan=2, sticky="ew", padx=(6, 12), pady=6)
 
         run5 = _make_rounded_button(
             left_panel,
@@ -1404,23 +1377,18 @@ class ExperimentApp:
         )
         _grid_run_button(run5, 12)
         _make_delay_slot(12, run_delay_vars[4])
-        tk.Label(
+        profile_btn_5 = _make_rounded_button(
             left_panel,
-            textvariable=profile_status_vars[5],
-            bg="#CFD9EA",
-            fg="#1D3557",
-            font=("TkDefaultFont", 10, "bold"),
-        ).grid(row=12, column=2, sticky="w", padx=(6, 4), pady=6)
-        tk.Button(
-            left_panel,
-            text="Profile",
-            command=lambda: _open_run_profile_editor(5),
-            width=8,
-            height=2,
-            bg="#D9E2F2",
-            activebackground="#C8D6EE",
-            font=("TkDefaultFont", 11, "bold"),
-        ).grid(row=12, column=3, sticky="e", padx=(4, 12), pady=6)
+            "Profile",
+            lambda: _open_run_profile_editor(5),
+            width=160,
+            height=72,
+            radius=22,
+            bg_rgb=(92, 122, 201),
+            font_size=16,
+            parent_bg="#CFD9EA",
+        )
+        profile_btn_5.grid(row=12, column=2, columnspan=2, sticky="ew", padx=(6, 12), pady=6)
 
         start_sequence_btn = _make_rounded_button(
             left_panel,
