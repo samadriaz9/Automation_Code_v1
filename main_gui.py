@@ -1222,23 +1222,71 @@ class ExperimentApp:
                     )
                 self.root.after(ms, lambda ri=run_id: _run_sequence_item(ri))
 
-        for idx in range(15):
-            step_no = idx + 1
-            label = self.step_labels[idx]
+        section_row = 2
+        step_btn_w = min(300, max(200, (sw - 140) // 3))
+
+        tk.Label(
+            wrapper,
+            text="Consumable Section",
+            background="#E9EEF7",
+            foreground="#0F2C52",
+            font=("TkDefaultFont", 16, "bold"),
+        ).grid(row=section_row, column=0, columnspan=3, sticky="w", padx=6, pady=(6, 4))
+        section_row += 1
+
+        consumable_steps = [2, 3]  # Change Media, Adjust Syringe
+        for i, step_no in enumerate(consumable_steps):
+            label = self.step_labels[step_no - 1]
             btn = _make_rounded_button(
                 wrapper,
                 label,
                 lambda n=step_no: self.run_specific_step(n),
-                width=min(300, max(200, (sw - 140) // 3)),
+                width=step_btn_w,
                 height=62,
                 radius=18,
                 bg_rgb=(22, 98, 212),
                 font_size=16,
                 parent_bg="#E9EEF7",
             )
-            r = 2 + idx // 3
+            btn.grid(row=section_row, column=i, sticky="ew", padx=6, pady=6)
+        section_row += 1
+
+        tk.Label(
+            wrapper,
+            text="Run Experiment Manually Step by Step",
+            background="#E9EEF7",
+            foreground="#0F2C52",
+            font=("TkDefaultFont", 16, "bold"),
+        ).grid(row=section_row, column=0, columnspan=3, sticky="w", padx=6, pady=(10, 4))
+        section_row += 1
+
+        manual_steps = [1] + list(range(4, 16))  # Remaining steps in sequence.
+        for idx, step_no in enumerate(manual_steps):
+            label = self.step_labels[step_no - 1]
+            btn = _make_rounded_button(
+                wrapper,
+                label,
+                lambda n=step_no: self.run_specific_step(n),
+                width=step_btn_w,
+                height=62,
+                radius=18,
+                bg_rgb=(22, 98, 212),
+                font_size=16,
+                parent_bg="#E9EEF7",
+            )
+            r = section_row + idx // 3
             c = idx % 3
             btn.grid(row=r, column=c, sticky="ew", padx=6, pady=6)
+        section_row += (len(manual_steps) + 2) // 3
+
+        tk.Label(
+            wrapper,
+            text="Only Incubation plus Imager",
+            background="#E9EEF7",
+            foreground="#0F2C52",
+            font=("TkDefaultFont", 16, "bold"),
+        ).grid(row=section_row, column=0, columnspan=3, sticky="w", padx=6, pady=(10, 4))
+        section_row += 1
 
         combo_btn = _make_rounded_button(
             wrapper,
@@ -1251,7 +1299,7 @@ class ExperimentApp:
             font_size=22,
             parent_bg="#E9EEF7",
         )
-        combo_btn.grid(row=7, column=0, columnspan=3, sticky="ew", padx=6, pady=(12, 6))
+        combo_btn.grid(row=section_row, column=0, columnspan=3, sticky="ew", padx=6, pady=(6, 6))
 
         run_btn_h = 80
         run_radius = 20
