@@ -785,28 +785,26 @@ class ExperimentApp:
 
         tk.Label(
             wrapper,
-            text="Actions",
+            text="Configuration",
             background="#E9EEF7",
-            foreground="#1D3557",
-            font=("TkDefaultFont", 15, "bold"),
-        ).grid(row=0, column=0, columnspan=3, sticky="w", padx=6, pady=(0, 6))
+            foreground="#0F2C52",
+            font=("TkDefaultFont", 18, "bold"),
+        ).grid(row=0, column=0, columnspan=3, sticky="w", padx=6, pady=(0, 2))
+        tk.Label(
+            wrapper,
+            text="Per-step hardware setup (touch a step to run it once)",
+            background="#E9EEF7",
+            foreground="#3A5378",
+            font=("TkDefaultFont", 12, "bold"),
+        ).grid(row=1, column=0, columnspan=3, sticky="w", padx=6, pady=(0, 10))
 
         def _start_full_experiment():
             popup.destroy()
             self.root.after(50, self.run_all_steps)
 
-        full_btn = _make_rounded_button(
-            wrapper,
-            "Run Full Experiment (all 15 steps, 2 s between steps)",
-            _start_full_experiment,
-            width=min(900, sw - 100),
-            height=72,
-            radius=24,
-            bg_rgb=(12, 158, 94),
-            font_size=20,
-            parent_bg="#E9EEF7",
-        )
-        full_btn.grid(row=1, column=0, columnspan=3, sticky="ew", padx=6, pady=(0, 10))
+        def _placeholder_experiment_run():
+            """Reserved for future experiment profiles."""
+            pass
 
         for idx in range(15):
             step_no = idx + 1
@@ -839,10 +837,10 @@ class ExperimentApp:
         )
         combo_btn.grid(row=7, column=0, columnspan=3, sticky="ew", padx=6, pady=(12, 6))
 
-        bottom = tk.Frame(outer, bg="#CFD9EA", height=110)
+        bottom = tk.Frame(outer, bg="#CFD9EA")
         bottom.grid(row=2, column=0, sticky="ew")
-        bottom.grid_propagate(False)
-        bottom.columnconfigure(0, weight=1)
+        for col in range(3):
+            bottom.columnconfigure(col, weight=1)
 
         def _close_popup():
             try:
@@ -850,6 +848,72 @@ class ExperimentApp:
             except Exception:
                 pass
             popup.destroy()
+
+        exp_w = min(900, sw - 100)
+        small_w = min(290, max(200, (sw - 140) // 3))
+
+        full_btn = _make_rounded_button(
+            bottom,
+            "Run 1st Experiment",
+            _start_full_experiment,
+            width=exp_w,
+            height=72,
+            radius=24,
+            bg_rgb=(12, 158, 94),
+            font_size=20,
+            parent_bg="#CFD9EA",
+        )
+        full_btn.grid(row=0, column=0, columnspan=3, pady=(14, 8), padx=10)
+
+        run2 = _make_rounded_button(
+            bottom,
+            "Run 2nd Experiment",
+            _placeholder_experiment_run,
+            width=small_w,
+            height=64,
+            radius=20,
+            bg_rgb=(10, 130, 82),
+            font_size=16,
+            parent_bg="#CFD9EA",
+        )
+        run2.grid(row=1, column=0, padx=6, pady=4, sticky="ew")
+        run3 = _make_rounded_button(
+            bottom,
+            "Run 3rd Experiment",
+            _placeholder_experiment_run,
+            width=small_w,
+            height=64,
+            radius=20,
+            bg_rgb=(10, 130, 82),
+            font_size=16,
+            parent_bg="#CFD9EA",
+        )
+        run3.grid(row=1, column=1, padx=6, pady=4, sticky="ew")
+        run4 = _make_rounded_button(
+            bottom,
+            "Run 4th Experiment",
+            _placeholder_experiment_run,
+            width=small_w,
+            height=64,
+            radius=20,
+            bg_rgb=(10, 130, 82),
+            font_size=16,
+            parent_bg="#CFD9EA",
+        )
+        run4.grid(row=1, column=2, padx=6, pady=4, sticky="ew")
+
+        run5 = _make_rounded_button(
+            bottom,
+            "Run 5th Experiment",
+            _placeholder_experiment_run,
+            width=small_w,
+            height=64,
+            radius=20,
+            bg_rgb=(10, 130, 82),
+            font_size=16,
+            parent_bg="#CFD9EA",
+        )
+        run5.grid(row=2, column=1, padx=6, pady=4, sticky="ew")
 
         close_exp = _make_rounded_button(
             bottom,
@@ -862,7 +926,7 @@ class ExperimentApp:
             font_size=24,
             parent_bg="#CFD9EA",
         )
-        close_exp.grid(row=0, column=0, pady=14)
+        close_exp.grid(row=3, column=0, columnspan=3, pady=(10, 16))
 
         popup.bind("<Escape>", lambda _e: _close_popup())
 
