@@ -261,8 +261,11 @@ class ExperimentApp:
         self.root = root
         self.root.title("Automation Device Controller")
         self.root.minsize(960, 560)
-        self.root.geometry(self._initial_geometry())
         self.root.protocol("WM_DELETE_WINDOW", self.on_exit)
+        try:
+            self.root.attributes("-fullscreen", True)
+        except Exception:
+            self.root.geometry(self._initial_geometry())
         self._setup_styles()
 
         self.is_busy = False
@@ -308,11 +311,23 @@ class ExperimentApp:
         outer.columnconfigure(0, weight=1)
         outer.rowconfigure(3, weight=1)
 
+        header = ttk.Frame(outer, style="App.TFrame")
+        header.grid(row=0, column=0, sticky="ew", pady=(0, 4))
+        header.columnconfigure(0, weight=1)
+
         ttk.Label(
-            outer,
+            header,
             text="Automation Device - Main GUI",
             style="Title.TLabel",
-        ).grid(row=0, column=0, sticky="w", pady=(0, 4))
+        ).grid(row=0, column=0, sticky="w")
+
+        self.btn_close = ttk.Button(
+            header,
+            text="Close",
+            command=self.on_exit,
+            style="ActionOrange.TButton",
+        )
+        self.btn_close.grid(row=0, column=1, sticky="e", padx=(12, 0))
 
         # Push main action buttons down for easier thumb reach on 7" touch LCD.
         spacer = ttk.Frame(outer, style="App.TFrame", height=36)
