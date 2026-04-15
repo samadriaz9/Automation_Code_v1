@@ -1094,7 +1094,7 @@ class ExperimentApp:
 
         run_btn_h = 80
         run_radius = 20
-        run_font = 16
+        run_font = 18
 
         def _grid_run_button(btn, row_idx, top_pad=6):
             btn.grid(row=row_idx, column=0, sticky="ew", padx=12, pady=(top_pad, 6))
@@ -1177,7 +1177,7 @@ class ExperimentApp:
             height=84,
             radius=24,
             bg_rgb=(22, 98, 212),
-            font_size=17,
+            font_size=19,
             parent_bg="#CFD9EA",
         )
         start_sequence_btn.grid(
@@ -1194,7 +1194,7 @@ class ExperimentApp:
             height=72,
             radius=26,
             bg_rgb=(194, 77, 0),
-            font_size=20,
+            font_size=22,
             parent_bg="#CFD9EA",
         )
         close_exp.grid(row=15, column=0, columnspan=2, sticky="ew", padx=12, pady=(10, 14))
