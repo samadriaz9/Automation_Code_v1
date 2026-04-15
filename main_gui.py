@@ -306,20 +306,25 @@ class ExperimentApp:
             "Sterilize",
         ]
 
-        outer = ttk.Frame(root, padding=10, style="App.TFrame")
+        outer = ttk.Frame(root, padding=12, style="App.TFrame")
         outer.pack(fill=tk.BOTH, expand=True)
         outer.columnconfigure(0, weight=1)
-        outer.rowconfigure(3, weight=1)
+        outer.rowconfigure(4, weight=1)
 
-        header = ttk.Frame(outer, style="App.TFrame")
-        header.grid(row=0, column=0, sticky="ew", pady=(0, 4))
+        header = ttk.Frame(outer, style="Header.TFrame", padding=10)
+        header.grid(row=0, column=0, sticky="ew", pady=(0, 8))
         header.columnconfigure(0, weight=1)
 
         ttk.Label(
             header,
-            text="Automation Device - Main GUI",
+            text="Automatic Microbial Detection System",
             style="Title.TLabel",
         ).grid(row=0, column=0, sticky="w")
+        ttk.Label(
+            header,
+            text="Touch Control Console",
+            style="SubTitle.TLabel",
+        ).grid(row=1, column=0, sticky="w", pady=(2, 0))
 
         self.btn_close = ttk.Button(
             header,
@@ -330,12 +335,20 @@ class ExperimentApp:
         self.btn_close.grid(row=0, column=1, sticky="e", padx=(12, 0))
 
         # Push main action buttons down for easier thumb reach on 7" touch LCD.
-        spacer = ttk.Frame(outer, style="App.TFrame", height=36)
+        spacer = ttk.Frame(outer, style="App.TFrame", height=18)
         spacer.grid(row=1, column=0, sticky="ew")
         spacer.grid_propagate(False)
 
-        btn_row = ttk.Frame(outer, style="App.TFrame")
-        btn_row.grid(row=2, column=0, sticky="ew", pady=(18, 12))
+        action_card = ttk.Frame(outer, style="Card.TFrame", padding=12)
+        action_card.grid(row=2, column=0, sticky="ew", pady=(8, 10))
+        action_card.columnconfigure(0, weight=1)
+        action_card.columnconfigure(1, weight=1)
+        ttk.Label(action_card, text="Main Actions", style="CardTitle.TLabel").grid(
+            row=0, column=0, columnspan=2, sticky="w", pady=(0, 10)
+        )
+
+        btn_row = ttk.Frame(action_card, style="Card.TFrame")
+        btn_row.grid(row=1, column=0, columnspan=2, sticky="ew")
         btn_row.columnconfigure(0, weight=1)
         btn_row.columnconfigure(1, weight=1)
 
@@ -370,8 +383,11 @@ class ExperimentApp:
         self.btn_camera.grid(row=0, column=1, sticky="ew", padx=(10, 0))
 
         self.status_var = tk.StringVar(value="Ready.")
-        ttk.Label(outer, textvariable=self.status_var, style="Status.TLabel").grid(
-            row=4, column=0, sticky="w", pady=(6, 0)
+        status_card = ttk.Frame(outer, style="StatusCard.TFrame", padding=(10, 8))
+        status_card.grid(row=3, column=0, sticky="ew", pady=(0, 8))
+        ttk.Label(status_card, text="System Status:", style="StatusKey.TLabel").grid(row=0, column=0, sticky="w")
+        ttk.Label(status_card, textvariable=self.status_var, style="Status.TLabel").grid(
+            row=0, column=1, sticky="w", padx=(8, 0)
         )
 
         self.log = tk.Text(
@@ -379,14 +395,14 @@ class ExperimentApp:
             wrap=tk.WORD,
             height=16,
             font=("TkDefaultFont", 11),
-            bg="#101826",
-            fg="#E9F0FF",
-            insertbackground="#E9F0FF",
+            bg="#0D1726",
+            fg="#EAF1FF",
+            insertbackground="#EAF1FF",
             relief=tk.FLAT,
             padx=8,
             pady=8,
         )
-        self.log.grid(row=3, column=0, sticky="nsew")
+        self.log.grid(row=4, column=0, sticky="nsew")
         self._incubation_stop_requested = False
 
     def _setup_styles(self):
@@ -395,16 +411,22 @@ class ExperimentApp:
             style.theme_use("clam")
         except Exception:
             pass
-        style.configure("App.TFrame", background="#F3F6FB")
-        style.configure("Title.TLabel", background="#F3F6FB", foreground="#16243A", font=("TkDefaultFont", 16, "bold"))
-        style.configure("Status.TLabel", background="#F3F6FB", foreground="#233A5A", font=("TkDefaultFont", 11, "bold"))
+        style.configure("App.TFrame", background="#E9EEF7")
+        style.configure("Header.TFrame", background="#113058")
+        style.configure("Card.TFrame", background="#F7FAFF")
+        style.configure("StatusCard.TFrame", background="#DFE9F8")
+        style.configure("Title.TLabel", background="#113058", foreground="#F2F7FF", font=("TkDefaultFont", 18, "bold"))
+        style.configure("SubTitle.TLabel", background="#113058", foreground="#BFD3F2", font=("TkDefaultFont", 11, "bold"))
+        style.configure("CardTitle.TLabel", background="#F7FAFF", foreground="#1D3557", font=("TkDefaultFont", 12, "bold"))
+        style.configure("StatusKey.TLabel", background="#DFE9F8", foreground="#1D3557", font=("TkDefaultFont", 11, "bold"))
+        style.configure("Status.TLabel", background="#DFE9F8", foreground="#173C6A", font=("TkDefaultFont", 11, "bold"))
         style.configure(
             "ActionBlue.TButton",
             font=("TkDefaultFont", 12, "bold"),
             padding=(10, 14),
             foreground="white",
             background="#1662D4",
-            borderwidth=0,
+            borderwidth=1,
         )
         style.map("ActionBlue.TButton", background=[("active", "#0F56BF")])
         style.configure(
@@ -413,7 +435,7 @@ class ExperimentApp:
             padding=(10, 14),
             foreground="white",
             background="#0C9E5E",
-            borderwidth=0,
+            borderwidth=1,
         )
         style.map("ActionGreen.TButton", background=[("active", "#09874F")])
         style.configure(
@@ -422,7 +444,7 @@ class ExperimentApp:
             padding=(10, 14),
             foreground="white",
             background="#D46A09",
-            borderwidth=0,
+            borderwidth=1,
         )
         style.map("ActionOrange.TButton", background=[("active", "#B45705")])
         style.configure("StepPopup.TButton", font=("TkDefaultFont", 11, "bold"), padding=(8, 10))
