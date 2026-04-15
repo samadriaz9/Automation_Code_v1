@@ -1236,8 +1236,8 @@ class ExperimentApp:
                 self.root.after(ms, lambda ri=run_id: _run_sequence_item(ri))
 
         section_row = 2
-        step_btn_w = min(300, max(200, (sw - 140) // 3))
-        step_btn_h = 62
+        step_btn_w = min(340, max(220, (sw - 120) // 3))
+        step_btn_h = 70
         step_btn_radius = 18
         step_btn_font = 16
         popup_step_buttons = {}
@@ -1390,11 +1390,11 @@ class ExperimentApp:
             wrapper,
             "Incubate + Pictures",
             self.run_incubate_and_picture_flow,
-            width=min(900, sw - 100),
-            height=72,
+            width=min(980, sw - 90),
+            height=78,
             radius=24,
             bg_rgb=(22, 98, 212),
-            font_size=22,
+            font_size=23,
             parent_bg="#E9EEF7",
         )
         combo_btn.grid(row=section_row, column=0, columnspan=3, sticky="ew", padx=6, pady=(6, 6))
