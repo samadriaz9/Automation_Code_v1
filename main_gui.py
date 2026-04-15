@@ -783,7 +783,7 @@ class ExperimentApp:
             text="How many experiment runs to enable (1–5):",
             bg="#CFD9EA",
             fg="#1D3557",
-            font=("TkDefaultFont", 11, "bold"),
+            font=("TkDefaultFont", 13, "bold"),
         ).grid(row=1, column=0, columnspan=2, sticky="w", padx=14, pady=(4, 2))
         run_count_var = tk.IntVar(value=5)
         count_slot = tk.Frame(left_panel, bg="#CFD9EA")
@@ -831,14 +831,14 @@ class ExperimentApp:
             text="Set delay (hours from now) next to each run button.",
             bg="#CFD9EA",
             fg="#1D3557",
-            font=("TkDefaultFont", 11, "bold"),
+            font=("TkDefaultFont", 13, "bold"),
         ).grid(row=3, column=0, columnspan=2, sticky="w", padx=14, pady=(6, 1))
         tk.Label(
             left_panel,
             text="Minimum gap between consecutive run slots: 8 hours.",
             bg="#CFD9EA",
             fg="#3A5378",
-            font=("TkDefaultFont", 10, "bold"),
+            font=("TkDefaultFont", 12, "bold"),
         ).grid(row=4, column=0, columnspan=2, sticky="w", padx=14, pady=(0, 10))
 
         mid = tk.Frame(content, bg="#E9EEF7")
@@ -1021,6 +1021,43 @@ class ExperimentApp:
                         ),
                     )
 
+        def _start_experiment_sequence():
+            if self.is_busy:
+                messagebox.showinfo("Busy", "Finish the current operation before starting sequence.")
+                return
+            try:
+                n = int(run_count_var.get())
+            except (tk.TclError, ValueError):
+                n = 5
+            n = max(1, min(5, n))
+
+            delays_h = _validate_run_slots(n)
+            if delays_h is None:
+                return
+
+            def _run_sequence_item(run_index):
+                # Keep strict sequence by waiting for previous run to finish.
+                if self.is_busy:
+                    self.write_log(
+                        f"Run {run_index} waiting: previous experiment still running."
+                    )
+                    self.root.after(60000, lambda ri=run_index: _run_sequence_item(ri))
+                    return
+                self.write_log(f"Starting Run {run_index} Experiment.")
+                self.root.after(50, self.run_all_steps)
+
+            _tear_down_popup()
+            for i in range(n):
+                run_id = i + 1
+                ms = int(delays_h[i] * 3600 * 1000)
+                if ms <= 0:
+                    self.write_log(f"Run {run_id} queued to start immediately.")
+                else:
+                    self.write_log(
+                        f"Run {run_id} scheduled in {delays_h[i]:.2f} h."
+                    )
+                self.root.after(ms, lambda ri=run_id: _run_sequence_item(ri))
+
         for idx in range(15):
             step_no = idx + 1
             label = self.step_labels[idx]
@@ -1129,7 +1166,22 @@ class ExperimentApp:
         _grid_run_button(run5, 12)
         _make_delay_slot(12, run_delay_vars[4])
 
-        left_panel.rowconfigure(13, weight=1)
+        start_sequence_btn = _make_rounded_button(
+            left_panel,
+            "Start Scheduled Sequence",
+            _start_experiment_sequence,
+            width=run_col_w,
+            height=84,
+            radius=24,
+            bg_rgb=(22, 98, 212),
+            font_size=17,
+            parent_bg="#CFD9EA",
+        )
+        start_sequence_btn.grid(
+            row=13, column=0, columnspan=2, sticky="ew", padx=12, pady=(10, 6)
+        )
+
+        left_panel.rowconfigure(14, weight=1)
 
         close_exp = _make_rounded_button(
             left_panel,
@@ -1142,7 +1194,7 @@ class ExperimentApp:
             font_size=20,
             parent_bg="#CFD9EA",
         )
-        close_exp.grid(row=14, column=0, columnspan=2, sticky="ew", padx=12, pady=(10, 14))
+        close_exp.grid(row=15, column=0, columnspan=2, sticky="ew", padx=12, pady=(10, 14))
 
         def _sync_run_buttons(*_args):
             try:
