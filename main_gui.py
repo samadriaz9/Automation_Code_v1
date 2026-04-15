@@ -398,6 +398,7 @@ class ExperimentApp:
         self.is_busy = False
         self.initialized = False
         self._last_step_success = None
+        self._run_experiment_popup = None
 
         self.steps = [
             self.step_1,
@@ -719,6 +720,7 @@ class ExperimentApp:
         if self.is_busy:
             return
         popup = tk.Toplevel(self.root)
+        self._run_experiment_popup = popup
         self._apply_app_icon(popup)
         popup.title("Run Experiment")
         popup.transient(self.root)
@@ -901,11 +903,14 @@ class ExperimentApp:
         ).grid(row=1, column=0, columnspan=3, sticky="w", padx=6, pady=(0, 10))
 
         def _close_popup():
+            self._run_experiment_popup = None
             try:
                 popup.attributes("-fullscreen", False)
             except Exception:
                 pass
             popup.destroy()
+
+        popup.protocol("WM_DELETE_WINDOW", _close_popup)
 
         def _parse_hours(txt, field_name):
             try:
@@ -2132,12 +2137,19 @@ class ExperimentApp:
         upper = target_temp + 0.3
         poll_seconds = 1.0
 
-        win = tk.Toplevel(self.root)
+        parent_win = self.root
+        try:
+            if self._run_experiment_popup is not None and self._run_experiment_popup.winfo_exists():
+                parent_win = self._run_experiment_popup
+        except Exception:
+            parent_win = self.root
+
+        win = tk.Toplevel(parent_win)
         self._apply_app_icon(win)
         win.title(f"{stage_name} Monitor")
         win.geometry("900x520")
         win.minsize(860, 480)
-        win.transient(self.root)
+        win.transient(parent_win)
 
         root_frame = ttk.Frame(win, padding=10, style="App.TFrame")
         root_frame.pack(fill=tk.BOTH, expand=True)
