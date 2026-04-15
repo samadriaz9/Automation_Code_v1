@@ -221,16 +221,60 @@ class CameraTestWindow:
         except Exception:
             pass
         self.win.title("USB Camera Test")
-        self.win.geometry("900x650")
-        self.win.minsize(500, 350)
+        self.win.geometry("1028x600")
+        self.win.minsize(900, 520)
         self.win.protocol("WM_DELETE_WINDOW", self.on_close)
         self._on_close_cb = on_close
 
-        container = ttk.Frame(self.win, padding=8)
+        container = tk.Frame(self.win, bg="#0C1522")
         container.pack(fill=tk.BOTH, expand=True)
-        self.preview = ttk.Label(container)
-        self.preview.pack(fill=tk.BOTH, expand=True)
-        ttk.Button(container, text="Close", command=self.on_close).pack(anchor=tk.E, pady=(8, 0))
+        container.columnconfigure(0, weight=1)
+        container.rowconfigure(1, weight=1)
+
+        header = tk.Frame(container, bg="#0F2C52", height=86)
+        header.grid(row=0, column=0, sticky="ew")
+        header.grid_propagate(False)
+        tk.Label(
+            header,
+            text="USB Camera Test Console",
+            bg="#0F2C52",
+            fg="#F2F7FF",
+            font=("TkDefaultFont", 20, "bold"),
+        ).pack(side=tk.LEFT, padx=14)
+        self.status_text = tk.StringVar(value="Live stream active")
+        tk.Label(
+            header,
+            textvariable=self.status_text,
+            bg="#0F2C52",
+            fg="#BFD3F2",
+            font=("TkDefaultFont", 12, "bold"),
+        ).pack(side=tk.LEFT, padx=12)
+
+        body = tk.Frame(container, bg="#0C1522")
+        body.grid(row=1, column=0, sticky="nsew", padx=10, pady=10)
+        body.columnconfigure(0, weight=1)
+        body.rowconfigure(0, weight=1)
+
+        preview_card = tk.Frame(body, bg="#111F33", bd=0, highlightthickness=0)
+        preview_card.grid(row=0, column=0, sticky="nsew")
+        preview_card.columnconfigure(0, weight=1)
+        preview_card.rowconfigure(0, weight=1)
+        self.preview = tk.Label(preview_card, bg="#111F33")
+        self.preview.grid(row=0, column=0, sticky="nsew", padx=6, pady=6)
+
+        close_img = _rounded_button_photo(520, 120, 42, (194, 77, 0), "Close Camera", font_size=44)
+        self.btn_close_camera = tk.Button(
+            body,
+            image=close_img,
+            command=self.on_close,
+            borderwidth=0,
+            highlightthickness=0,
+            bg="#0C1522",
+            activebackground="#0C1522",
+            cursor="hand2",
+        )
+        self.btn_close_camera.image = close_img
+        self.btn_close_camera.grid(row=1, column=0, pady=(14, 6))
 
         self.cap = cap
         if self.cap is None:
@@ -249,13 +293,17 @@ class CameraTestWindow:
         if ok and frame is not None:
             rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             h, w = rgb.shape[:2]
-            max_w = max(300, self.win.winfo_width() - 40)
-            if w > max_w:
-                scale = float(max_w) / float(w)
+            max_w = max(640, self.win.winfo_width() - 80)
+            max_h = max(360, self.win.winfo_height() - 250)
+            scale = min(float(max_w) / float(w), float(max_h) / float(h))
+            if scale < 1.0:
                 rgb = cv2.resize(rgb, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
             img = Image.fromarray(rgb)
             self.photo = ImageTk.PhotoImage(img)
             self.preview.configure(image=self.photo)
+            self.status_text.set("Live stream active")
+        else:
+            self.status_text.set("Waiting for camera frame...")
         self.win.after(30, self.update_frame)
 
     def on_close(self):
@@ -288,9 +336,7 @@ class ExperimentApp:
             self.root.geometry(self._initial_geometry())
         self._setup_styles()
         self._app_icon_photo = None
-        self._header_bg_photo = None
         self._title_icon_photo = None
-        self._status_bg_photo = None
         self._apply_app_icon(self.root)
 
         self.is_busy = False
@@ -434,7 +480,6 @@ class ExperimentApp:
         self.status_var = tk.StringVar(value="Ready.")
         status_card = ttk.Frame(outer, style="StatusCard.TFrame", padding=(10, 8))
         status_card.grid(row=3, column=0, sticky="ew", pady=(0, 8))
-        self._apply_status_watermark(status_card)
         ttk.Label(status_card, text="System Status:", style="StatusKey.TLabel").grid(row=0, column=0, sticky="w")
         ttk.Label(status_card, textvariable=self.status_var, style="Status.TLabel").grid(
             row=0, column=1, sticky="w", padx=(8, 0)
@@ -534,28 +579,6 @@ class ExperimentApp:
             icon_img = src.resize((84, 84), Image.LANCZOS)
             self._title_icon_photo = ImageTk.PhotoImage(icon_img)
             tk.Label(parent_frame, image=self._title_icon_photo, bg="#113058").pack(side=tk.LEFT)
-        except Exception:
-            pass
-
-    def _apply_status_watermark(self, status_frame):
-        """Apply background.png as watermark inside System Status card."""
-        bg_path = _find_asset_path(
-            "background.png",
-            extra_candidates=[
-                r"D:\office_project_data\automation_device\Automation_Code_v1\background.png",
-            ],
-        )
-        if not bg_path:
-            return
-        try:
-            src = Image.open(bg_path).convert("RGB")
-            banner = src.resize((1000, 82), Image.LANCZOS)
-            # Lighten to make it behave like a watermark.
-            banner = Image.blend(banner, Image.new("RGB", banner.size, (255, 255, 255)), 0.70)
-            self._status_bg_photo = ImageTk.PhotoImage(banner)
-            bg_label = tk.Label(status_frame, image=self._status_bg_photo, bd=0, highlightthickness=0)
-            bg_label.place(x=0, y=0, relwidth=1, relheight=1)
-            bg_label.lower()
         except Exception:
             pass
 
