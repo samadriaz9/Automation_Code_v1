@@ -240,8 +240,10 @@ def open_usb_camera_with_recovery(
 
 
 class CameraTestWindow:
-    def __init__(self, parent, cap, on_close=None):
+    def __init__(self, parent, cap, on_close=None, app=None):
         self.win = tk.Toplevel(parent)
+        self._app = app
+        self._closing = False
         try:
             if hasattr(parent, "_app_icon_photo") and parent._app_icon_photo is not None:
                 self.win.iconphoto(True, parent._app_icon_photo)
@@ -258,7 +260,7 @@ class CameraTestWindow:
         container.columnconfigure(0, weight=1)
         container.rowconfigure(1, weight=1)
 
-        header = tk.Frame(container, bg="#0F2C52", height=86)
+        header = tk.Frame(container, bg="#0F2C52", height=72)
         header.grid(row=0, column=0, sticky="ew")
         header.grid_propagate(False)
         tk.Label(
@@ -278,7 +280,7 @@ class CameraTestWindow:
         ).pack(side=tk.LEFT, padx=12)
 
         body = tk.Frame(container, bg="#0C1522")
-        body.grid(row=1, column=0, sticky="nsew", padx=10, pady=10)
+        body.grid(row=1, column=0, sticky="nsew", padx=8, pady=6)
         body.columnconfigure(0, weight=1)
         body.rowconfigure(0, weight=1)
 
@@ -289,7 +291,7 @@ class CameraTestWindow:
         self.preview = tk.Label(preview_card, bg="#111F33")
         self.preview.grid(row=0, column=0, sticky="nsew", padx=6, pady=6)
 
-        close_img = _rounded_button_photo(520, 120, 42, (194, 77, 0), "Close Camera", font_size=44)
+        close_img = _rounded_button_photo(400, 92, 32, (194, 77, 0), "Close Camera", font_size=32)
         self.btn_close_camera = tk.Button(
             body,
             image=close_img,
@@ -301,7 +303,7 @@ class CameraTestWindow:
             cursor="hand2",
         )
         self.btn_close_camera.image = close_img
-        self.btn_close_camera.grid(row=1, column=0, pady=(14, 6))
+        self.btn_close_camera.grid(row=1, column=0, pady=(8, 4))
 
         self.cap = cap
         if self.cap is None:
@@ -320,8 +322,8 @@ class CameraTestWindow:
         if ok and frame is not None:
             rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             h, w = rgb.shape[:2]
-            max_w = max(640, self.win.winfo_width() - 80)
-            max_h = max(360, self.win.winfo_height() - 250)
+            max_w = max(920, self.win.winfo_width() - 36)
+            max_h = max(500, self.win.winfo_height() - 175)
             scale = min(float(max_w) / float(w), float(max_h) / float(h))
             if scale < 1.0:
                 rgb = cv2.resize(rgb, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
@@ -334,21 +336,47 @@ class CameraTestWindow:
         self.win.after(30, self.update_frame)
 
     def on_close(self):
+        if self._closing:
+            return
+        self._closing = True
         self.running = False
+        try:
+            self.btn_close_camera.config(state=tk.DISABLED)
+        except Exception:
+            pass
         if self.cap is not None:
             try:
                 self.cap.release()
             except Exception:
                 pass
             self.cap = None
-        # Requirement: close should switch camera off through relay cycle.
-        run_relay(P7, 3)
+
+        if self._app is not None:
+            self._app._show_camera_closing_popup()
+
+        def _relay_worker():
+            try:
+                run_relay(P7, 3)
+            finally:
+                self.win.after(0, self._after_relay_close)
+
+        threading.Thread(target=_relay_worker, daemon=True).start()
+
+    def _after_relay_close(self):
+        try:
+            if self._app is not None:
+                self._app._hide_camera_closing_popup()
+        except Exception:
+            pass
         if callable(self._on_close_cb):
             try:
                 self._on_close_cb()
             except Exception:
                 pass
-        self.win.destroy()
+        try:
+            self.win.destroy()
+        except Exception:
+            pass
 
 
 class ExperimentApp:
@@ -529,6 +557,7 @@ class ExperimentApp:
         self._camera_test_active = False
         self._camera_test_done_once = False
         self._camera_loading_popup = None
+        self._camera_closing_popup = None
 
     def _setup_styles(self):
         style = ttk.Style(self.root)
@@ -967,8 +996,8 @@ class ExperimentApp:
         popup = tk.Toplevel(self.root)
         self._apply_app_icon(popup)
         popup.title("Loading Camera")
-        popup.geometry("460x190")
-        popup.minsize(440, 180)
+        popup.geometry("520x220")
+        popup.minsize(500, 200)
         popup.transient(self.root)
         popup.grab_set()
 
@@ -976,12 +1005,19 @@ class ExperimentApp:
         frame.pack(fill=tk.BOTH, expand=True, padx=14, pady=14)
         tk.Label(
             frame,
-            text="Switching on camera and loading stream...",
+            text="Switching on camera",
             bg="#F7FAFF",
             fg="#1D3557",
-            font=("TkDefaultFont", 15, "bold"),
-        ).pack(anchor="w", pady=(2, 10))
-        bar = ttk.Progressbar(frame, mode="indeterminate", length=380)
+            font=("TkDefaultFont", 16, "bold"),
+        ).pack(anchor="w", pady=(2, 0))
+        tk.Label(
+            frame,
+            text="and loading stream...",
+            bg="#F7FAFF",
+            fg="#1D3557",
+            font=("TkDefaultFont", 16, "bold"),
+        ).pack(anchor="w", pady=(0, 10))
+        bar = ttk.Progressbar(frame, mode="indeterminate", length=420)
         bar.pack(fill=tk.X, pady=(6, 2))
         bar.start(14)
         tk.Label(
@@ -989,9 +1025,61 @@ class ExperimentApp:
             text="Please wait...",
             bg="#F7FAFF",
             fg="#173C6A",
-            font=("TkDefaultFont", 13, "bold"),
+            font=("TkDefaultFont", 14, "bold"),
         ).pack(anchor="w", pady=(8, 0))
         self._camera_loading_popup = popup
+
+    def _show_camera_closing_popup(self):
+        if self._camera_closing_popup is not None:
+            return
+        popup = tk.Toplevel(self.root)
+        self._apply_app_icon(popup)
+        popup.title("Closing Camera")
+        popup.geometry("520x200")
+        popup.minsize(480, 180)
+        popup.transient(self.root)
+        popup.grab_set()
+
+        frame = tk.Frame(popup, bg="#F7FAFF")
+        frame.pack(fill=tk.BOTH, expand=True, padx=14, pady=14)
+        tk.Label(
+            frame,
+            text="Switching off camera",
+            bg="#F7FAFF",
+            fg="#1D3557",
+            font=("TkDefaultFont", 16, "bold"),
+        ).pack(anchor="w", pady=(2, 0))
+        tk.Label(
+            frame,
+            text="via relay (about 3 seconds)...",
+            bg="#F7FAFF",
+            fg="#1D3557",
+            font=("TkDefaultFont", 16, "bold"),
+        ).pack(anchor="w", pady=(0, 10))
+        bar = ttk.Progressbar(frame, mode="indeterminate", length=420)
+        bar.pack(fill=tk.X, pady=(6, 2))
+        bar.start(14)
+        tk.Label(
+            frame,
+            text="Please wait...",
+            bg="#F7FAFF",
+            fg="#173C6A",
+            font=("TkDefaultFont", 14, "bold"),
+        ).pack(anchor="w", pady=(8, 0))
+        self._camera_closing_popup = popup
+
+    def _hide_camera_closing_popup(self):
+        if self._camera_closing_popup is None:
+            return
+        try:
+            self._camera_closing_popup.grab_release()
+        except Exception:
+            pass
+        try:
+            self._camera_closing_popup.destroy()
+        except Exception:
+            pass
+        self._camera_closing_popup = None
 
     def _start_camera_test_launch(self):
         self._camera_test_active = True
@@ -1029,7 +1117,7 @@ class ExperimentApp:
             self.btn_camera.config(state=tk.NORMAL)
             return
 
-        CameraTestWindow(self.root, cap=cap, on_close=self._on_camera_test_closed)
+        CameraTestWindow(self.root, cap=cap, on_close=self._on_camera_test_closed, app=self)
 
     def _on_camera_test_closed(self):
         self._camera_test_active = False
