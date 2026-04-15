@@ -415,7 +415,7 @@ class ExperimentApp:
             self.step_15,
         ]
         self.step_labels = [
-            "Empty Syringe",
+            "All Module Home",
             "Change Media",
             "Adjust Syringe",
             "Petri Home",
@@ -839,8 +839,7 @@ class ExperimentApp:
 
         bottom = tk.Frame(outer, bg="#CFD9EA")
         bottom.grid(row=2, column=0, sticky="ew")
-        for col in range(3):
-            bottom.columnconfigure(col, weight=1)
+        bottom.columnconfigure(0, weight=1)
 
         def _close_popup():
             try:
@@ -849,84 +848,91 @@ class ExperimentApp:
                 pass
             popup.destroy()
 
-        exp_w = min(900, sw - 100)
-        small_w = min(290, max(200, (sw - 140) // 3))
+        run_col_w = min(820, sw - 80)
+        run_btn_h = 68
+        run_radius = 22
+        run_font = 18
+
+        def _grid_run_button(btn, row_idx, top_pad=6):
+            btn.grid(row=row_idx, column=0, sticky="ew", padx=16, pady=(top_pad, 6))
 
         full_btn = _make_rounded_button(
             bottom,
             "Run 1st Experiment",
             _start_full_experiment,
-            width=exp_w,
-            height=72,
-            radius=24,
+            width=run_col_w,
+            height=run_btn_h,
+            radius=run_radius,
             bg_rgb=(12, 158, 94),
-            font_size=20,
+            font_size=run_font,
             parent_bg="#CFD9EA",
         )
-        full_btn.grid(row=0, column=0, columnspan=3, pady=(14, 8), padx=10)
+        _grid_run_button(full_btn, 0, top_pad=14)
 
         run2 = _make_rounded_button(
             bottom,
             "Run 2nd Experiment",
             _placeholder_experiment_run,
-            width=small_w,
-            height=64,
-            radius=20,
-            bg_rgb=(10, 130, 82),
-            font_size=16,
+            width=run_col_w,
+            height=run_btn_h,
+            radius=run_radius,
+            bg_rgb=(12, 158, 94),
+            font_size=run_font,
             parent_bg="#CFD9EA",
         )
-        run2.grid(row=1, column=0, padx=6, pady=4, sticky="ew")
+        _grid_run_button(run2, 1)
+
         run3 = _make_rounded_button(
             bottom,
             "Run 3rd Experiment",
             _placeholder_experiment_run,
-            width=small_w,
-            height=64,
-            radius=20,
-            bg_rgb=(10, 130, 82),
-            font_size=16,
+            width=run_col_w,
+            height=run_btn_h,
+            radius=run_radius,
+            bg_rgb=(12, 158, 94),
+            font_size=run_font,
             parent_bg="#CFD9EA",
         )
-        run3.grid(row=1, column=1, padx=6, pady=4, sticky="ew")
+        _grid_run_button(run3, 2)
+
         run4 = _make_rounded_button(
             bottom,
             "Run 4th Experiment",
             _placeholder_experiment_run,
-            width=small_w,
-            height=64,
-            radius=20,
-            bg_rgb=(10, 130, 82),
-            font_size=16,
+            width=run_col_w,
+            height=run_btn_h,
+            radius=run_radius,
+            bg_rgb=(12, 158, 94),
+            font_size=run_font,
             parent_bg="#CFD9EA",
         )
-        run4.grid(row=1, column=2, padx=6, pady=4, sticky="ew")
+        _grid_run_button(run4, 3)
 
         run5 = _make_rounded_button(
             bottom,
             "Run 5th Experiment",
             _placeholder_experiment_run,
-            width=small_w,
-            height=64,
-            radius=20,
-            bg_rgb=(10, 130, 82),
-            font_size=16,
+            width=run_col_w,
+            height=run_btn_h,
+            radius=run_radius,
+            bg_rgb=(12, 158, 94),
+            font_size=run_font,
             parent_bg="#CFD9EA",
         )
-        run5.grid(row=2, column=1, padx=6, pady=4, sticky="ew")
+        _grid_run_button(run5, 4)
 
         close_exp = _make_rounded_button(
             bottom,
             "Close Panel",
             _close_popup,
-            width=min(480, sw - 100),
+            width=run_col_w,
             height=80,
             radius=28,
             bg_rgb=(194, 77, 0),
             font_size=24,
             parent_bg="#CFD9EA",
         )
-        close_exp.grid(row=3, column=0, columnspan=3, pady=(10, 16))
+        close_exp.grid(row=5, column=0, sticky="ew", padx=16, pady=(12, 16))
 
         popup.bind("<Escape>", lambda _e: _close_popup())
 
@@ -1282,7 +1288,7 @@ class ExperimentApp:
 
     # ---------- 15 experiment steps ----------
     def step_1(self):
-        self.write_log("Step 1: Empty Syringe")
+        self.write_log("Step 1: All Module Home")
         Media_dispensor_home()
 
     def step_2(self):
