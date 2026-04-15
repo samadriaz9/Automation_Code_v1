@@ -347,7 +347,7 @@ class ExperimentApp:
         self._apply_title_icon(title_wrap)
 
         text_col = tk.Frame(title_wrap, bg="#113058")
-        text_col.pack(side=tk.LEFT, padx=(10, 0))
+        text_col.pack(side=tk.LEFT, padx=(16, 0), pady=(8, 0))
         tk.Label(
             text_col,
             text="Automatic Microbial Detection System",
@@ -364,7 +364,7 @@ class ExperimentApp:
         ).pack(anchor="w", pady=(2, 0))
 
         close_img = _rounded_button_photo(
-            210, 84, 30, (194, 77, 0), "Close", font_size=30
+            236, 94, 34, (194, 77, 0), "Close", font_size=33
         )
         self.btn_close = tk.Button(
             header,
@@ -528,7 +528,7 @@ class ExperimentApp:
             return
         try:
             src = Image.open(icon_path).convert("RGBA")
-            icon_img = src.resize((72, 72), Image.LANCZOS)
+            icon_img = src.resize((84, 84), Image.LANCZOS)
             self._title_icon_photo = ImageTk.PhotoImage(icon_img)
             tk.Label(parent_frame, image=self._title_icon_photo, bg="#113058").pack(side=tk.LEFT)
         except Exception:
