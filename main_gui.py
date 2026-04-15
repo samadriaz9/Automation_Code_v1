@@ -718,8 +718,11 @@ class ExperimentApp:
         popup = tk.Toplevel(self.root)
         self._apply_app_icon(popup)
         popup.title("Run Experiment")
+        popup.transient(self.root)
         sw = self.root.winfo_screenwidth()
         sh = self.root.winfo_screenheight()
+        # Force full-screen footprint across window managers (Pi/X11 + Windows fallbacks).
+        popup.geometry(f"{sw}x{sh}+0+0")
         try:
             popup.attributes("-fullscreen", True)
         except Exception:
@@ -727,6 +730,12 @@ class ExperimentApp:
                 popup.state("zoomed")
             except Exception:
                 popup.geometry(f"{sw}x{sh}+0+0")
+        try:
+            popup.attributes("-zoomed", True)
+        except Exception:
+            pass
+        popup.update_idletasks()
+        popup.geometry(f"{sw}x{sh}+0+0")
         popup.minsize(min(800, sw), min(480, sh))
         popup.lift()
         popup.focus_force()
