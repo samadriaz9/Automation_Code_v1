@@ -688,6 +688,40 @@ class ExperimentApp:
         y = max(0, (sh - h) // 2)
         return f"{w}x{h}+{x}+{y}"
 
+    def _enforce_fullscreen(self, win):
+        """Force a toplevel to occupy full screen reliably across WMs."""
+        sw = self.root.winfo_screenwidth()
+        sh = self.root.winfo_screenheight()
+
+        def _apply_once():
+            try:
+                if not win.winfo_exists():
+                    return
+            except Exception:
+                return
+            try:
+                win.geometry(f"{sw}x{sh}+0+0")
+            except Exception:
+                pass
+            try:
+                win.attributes("-fullscreen", True)
+            except Exception:
+                pass
+            try:
+                win.state("zoomed")
+            except Exception:
+                pass
+            try:
+                win.lift()
+                win.focus_force()
+            except Exception:
+                pass
+
+        # Apply now + re-apply after mapping (Pi/X11 can ignore first request).
+        _apply_once()
+        win.after(60, _apply_once)
+        win.after(220, _apply_once)
+
     def set_busy(self, busy, status_text):
         self.is_busy = busy
         state = tk.DISABLED if busy else tk.NORMAL
@@ -723,27 +757,10 @@ class ExperimentApp:
         self._run_experiment_popup = popup
         self._apply_app_icon(popup)
         popup.title("Run Experiment")
-        popup.transient(self.root)
         sw = self.root.winfo_screenwidth()
         sh = self.root.winfo_screenheight()
-        # Force full-screen footprint across window managers (Pi/X11 + Windows fallbacks).
-        popup.geometry(f"{sw}x{sh}+0+0")
-        try:
-            popup.attributes("-fullscreen", True)
-        except Exception:
-            try:
-                popup.state("zoomed")
-            except Exception:
-                popup.geometry(f"{sw}x{sh}+0+0")
-        try:
-            popup.attributes("-zoomed", True)
-        except Exception:
-            pass
-        popup.update_idletasks()
-        popup.geometry(f"{sw}x{sh}+0+0")
+        self._enforce_fullscreen(popup)
         popup.minsize(min(800, sw), min(480, sh))
-        popup.lift()
-        popup.focus_force()
 
         outer = tk.Frame(popup, bg="#E9EEF7")
         outer.pack(fill=tk.BOTH, expand=True)
@@ -2028,6 +2045,7 @@ class ExperimentApp:
         filteration_flask_config()
         Filteration_flask_up(10)
         Filteration_unit_up(850)
+        filteration_suction_pump_off()
         time.sleep(1)
         solinoid_value_to_filteration()
         filteration_suction_pump_on(90)
