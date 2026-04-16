@@ -119,7 +119,11 @@ from petri_dishes import (
     cleanup as petri_dishes_cleanup,
 )
 from relay_control import P1, P7, run_relay, set_relay, cleanup as relay_cleanup
-from solinoid_value_drain import cleanup as drain_solenoid_cleanup
+from solinoid_value_drain import (
+    solinoid_value_drain_on,
+    solinoid_value_drain_off,
+    cleanup as drain_solenoid_cleanup,
+)
 from solinoid_value_to_filteration import (
     solinoid_value_to_filteration,
     water_level_reached,
@@ -1400,6 +1404,20 @@ class ExperimentApp:
             btn.grid(row=r, column=c, sticky="ew", padx=6, pady=6)
         section_row += (len(manual_steps) + 2) // 3
 
+        drain_btn = _make_rounded_button(
+            wrapper,
+            "Drain Solenoid 5 sec",
+            self.run_drain_solenoid_pulse,
+            width=step_btn_w,
+            height=step_btn_h,
+            radius=step_btn_radius,
+            bg_rgb=(34, 124, 164),
+            font_size=step_btn_font,
+            parent_bg="#E9EEF7",
+        )
+        drain_btn.grid(row=section_row, column=0, sticky="ew", padx=6, pady=6)
+        section_row += 1
+
         tk.Label(
             wrapper,
             text="Only Incubation plus Imager",
@@ -1762,6 +1780,31 @@ class ExperimentApp:
             self._last_step_success = False
             self.write_log(f"ERROR: {exc}")
             self.root.after(0, lambda: self.set_busy(False, "Error occurred. Check log."))
+
+    def run_drain_solenoid_pulse(self):
+        if self.is_busy:
+            return
+        self._last_step_success = None
+        self.set_busy(True, "Running drain solenoid for 5 seconds...")
+        self.root.after(10, self._run_drain_solenoid_pulse_worker)
+
+    def _run_drain_solenoid_pulse_worker(self):
+        try:
+            self.write_log("Drain solenoid: ON for 5 seconds")
+            solinoid_value_drain_on()
+            time.sleep(5)
+            solinoid_value_drain_off()
+            self._last_step_success = True
+            self.write_log("Drain solenoid: OFF")
+            self.root.after(0, lambda: self.set_busy(False, "Ready. Drain solenoid pulse completed."))
+        except Exception as exc:
+            self._last_step_success = False
+            try:
+                solinoid_value_drain_off()
+            except Exception:
+                pass
+            self.write_log(f"ERROR: {exc}")
+            self.root.after(0, lambda: self.set_busy(False, "Error occurred during drain solenoid pulse."))
 
     def _create_next_experiment_dir(self, output_root="."):
         os.makedirs(output_root, exist_ok=True)
