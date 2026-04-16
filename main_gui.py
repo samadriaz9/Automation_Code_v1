@@ -435,7 +435,7 @@ class ExperimentApp:
             "Sterilize",
         ]
         # Full run sequence follows the "actual experiment" flow shown in manual section.
-        self.full_experiment_sequence = [1] + list(range(4, 16))
+        self.full_experiment_sequence = [1] + list(range(4, 15))
 
         outer = ttk.Frame(root, padding=12, style="App.TFrame")
         outer.pack(fill=tk.BOTH, expand=True)
@@ -1390,7 +1390,7 @@ class ExperimentApp:
         ).grid(row=section_row, column=0, columnspan=3, sticky="w", padx=6, pady=(10, 4))
         section_row += 1
 
-        manual_steps = [1] + list(range(4, 16))  # Remaining steps in sequence.
+        manual_steps = [1] + list(range(4, 15))  # Actual experiment sequence.
         for idx, step_no in enumerate(manual_steps):
             label = self.step_labels[step_no - 1]
             btn = _make_manual_step_button(wrapper, label, step_no, base_color=(22, 98, 212))
@@ -1805,7 +1805,7 @@ class ExperimentApp:
                 self.steps[step_no - 1]()
                 self.write_log(f"Completed {run_idx}/{total}: {step_label} (Step {step_no})")
                 if run_idx < total:
-                    time.sleep(2)  # Required delay between steps
+                    time.sleep(1)  # Required delay between steps
             self.root.after(
                 0,
                 lambda: self.set_busy(
@@ -1994,7 +1994,6 @@ class ExperimentApp:
     # ---------- 15 experiment steps ----------
     def step_1(self):
         self.write_log("Step 1: All Module Home")
-        Media_dispensor_home()
         incubator_lid_home()
         suction_pipe_home()
         filteration_unit_config()
@@ -2073,6 +2072,7 @@ class ExperimentApp:
         suction_pump_up(3065)
         suction_pipe_up(300)
         upper_suction_pump_off()
+        time.sleep(5)
 
     def step_8(self):
         self.write_log("Step 8: Pouring media")
