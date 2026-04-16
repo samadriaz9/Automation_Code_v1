@@ -1173,7 +1173,8 @@ class ExperimentApp:
             ms = _schedule_ms_for_run(k, n)
             if ms is None:
                 return
-            selected_profile = list(run_profiles.get(k, []))
+            # Safety: Run 1st Experiment always executes the full experiment sequence.
+            selected_profile = [] if k == 1 else list(run_profiles.get(k, []))
 
             def _start_run_now(run_id, profile):
                 if profile:
@@ -1186,7 +1187,7 @@ class ExperimentApp:
                         lambda p=profile: self._run_incubate_and_picture_worker(p),
                     )
                 else:
-                    self.write_log(f"Run {run_id}: using default full 15-step run.")
+                    self.write_log(f"Run {run_id}: using default full experiment sequence.")
                     self.root.after(50, self.run_all_steps)
 
             if k == 1:
@@ -1231,7 +1232,8 @@ class ExperimentApp:
                     self.root.after(60000, lambda ri=run_index: _run_sequence_item(ri))
                     return
                 self.write_log(f"Starting Run {run_index} Experiment.")
-                selected_profile = list(run_profiles.get(run_index, []))
+                # Safety: Run 1st Experiment in sequence always uses full experiment flow.
+                selected_profile = [] if run_index == 1 else list(run_profiles.get(run_index, []))
                 if selected_profile:
                     self.write_log(
                         f"Run {run_index}: using configured profile with {len(selected_profile)} stage(s)."
@@ -1242,7 +1244,7 @@ class ExperimentApp:
                         lambda p=selected_profile: self._run_incubate_and_picture_worker(p),
                     )
                 else:
-                    self.write_log(f"Run {run_index}: using default full 15-step run.")
+                    self.write_log(f"Run {run_index}: using default full experiment sequence.")
                     self.root.after(50, self.run_all_steps)
 
             _tear_down_popup()
@@ -2199,7 +2201,13 @@ class ExperimentApp:
         self._incubation_stop_requested = False
 
         def _request_stop():
-            self._incubation_stop_requested = True
+            should_stop = messagebox.askyesno(
+                "Confirm Stop",
+                f"Stop {stage_name} now?\nThis will cancel the current incubation stage.",
+                parent=win,
+            )
+            if should_stop:
+                self._incubation_stop_requested = True
 
         stop_btn = _make_rounded_button(
             root_frame, "Stop", _request_stop, 760, 82, 28, (212, 106, 9), font_size=30, parent_bg="#F3F6FB"
