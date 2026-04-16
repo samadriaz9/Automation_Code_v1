@@ -739,7 +739,6 @@ class ExperimentApp:
             return
         self.write_log("Initial setup: bring all modules to home/start position")
         _bootstrap_gpio()
-        self._run_with_gpio_retry("Media dispensor home", Media_dispensor_home)
         self._run_with_gpio_retry("Incubator lid home", incubator_lid_home)
         self._run_with_gpio_retry("Suction pipe home", suction_pipe_home)
         self._run_with_gpio_retry("Filteration unit config", filteration_unit_config)
