@@ -119,6 +119,14 @@ from petri_dishes import (
     cleanup as petri_dishes_cleanup,
 )
 from relay_control import P1, P7, run_relay, set_relay, cleanup as relay_cleanup
+from sterilize_bts import (
+    P3_ASSEMBLY,
+    P4_SUCTION,
+    run_sterilize_assembly,
+    run_sterilize_suction,
+    set_sterilize_bts,
+    cleanup as sterilize_bts_cleanup,
+)
 from solinoid_value_drain import cleanup as drain_solenoid_cleanup
 from solinoid_value_to_filteration import (
     solinoid_value_to_filteration,
@@ -167,6 +175,7 @@ def shutdown_all():
         ("upper_suction_pump (DC)", suction_cleanup),
         ("suction_pump_up_down", suction_lift_cleanup),
         ("relay", relay_cleanup),
+        ("sterilize_bts", sterilize_bts_cleanup),
         ("solenoid", solenoid_cleanup),
         ("drain_solenoid", drain_solenoid_cleanup),
         ("waste_solenoid", waste_solenoid_cleanup),
@@ -1404,8 +1413,8 @@ class ExperimentApp:
             btn.grid(row=r, column=c, sticky="ew", padx=6, pady=6)
 
         placeholder_buttons = [
-            ("Sterilize_Assembly", lambda: self.write_log("Sterilize_Assembly: not yet configured.")),
-            ("Sterilize_Suction", lambda: self.write_log("Sterilize_Suction: not yet configured.")),
+            ("Sterilize_Assembly", self.run_sterilize_assembly_pulse),
+            ("Sterilize_Suction", self.run_sterilize_suction_pulse),
         ]
         base_idx = len(manual_steps)
         for i, (label, cmd) in enumerate(placeholder_buttons):
@@ -1811,6 +1820,20 @@ class ExperimentApp:
         self.set_busy(True, "Running waste solenoid for 5 seconds...")
         self.root.after(10, self._run_waste_solenoid_pulse_worker)
 
+    def run_sterilize_assembly_pulse(self):
+        if self.is_busy:
+            return
+        self._last_step_success = None
+        self.set_busy(True, "Running Sterilize_Assembly for 5 seconds...")
+        self.root.after(10, self._run_sterilize_assembly_worker)
+
+    def run_sterilize_suction_pulse(self):
+        if self.is_busy:
+            return
+        self._last_step_success = None
+        self.set_busy(True, "Running Sterilize_Suction for 5 seconds...")
+        self.root.after(10, self._run_sterilize_suction_worker)
+
     def _run_waste_solenoid_pulse_worker(self):
         try:
             self.write_log("Waste solenoid: ON for 5 seconds")
@@ -1828,6 +1851,38 @@ class ExperimentApp:
                 pass
             self.write_log(f"ERROR: {exc}")
             self.root.after(0, lambda: self.set_busy(False, "Error occurred during waste solenoid pulse."))
+
+    def _run_sterilize_assembly_worker(self):
+        try:
+            self.write_log("Sterilize_Assembly: BTS ON for 5 seconds (I2C P3)")
+            run_sterilize_assembly(5)
+            self._last_step_success = True
+            self.write_log("Sterilize_Assembly: BTS OFF")
+            self.root.after(0, lambda: self.set_busy(False, "Ready. Sterilize_Assembly completed."))
+        except Exception as exc:
+            self._last_step_success = False
+            try:
+                set_sterilize_bts(P3_ASSEMBLY, False)
+            except Exception:
+                pass
+            self.write_log(f"ERROR: {exc}")
+            self.root.after(0, lambda: self.set_busy(False, "Error occurred during Sterilize_Assembly."))
+
+    def _run_sterilize_suction_worker(self):
+        try:
+            self.write_log("Sterilize_Suction: BTS ON for 5 seconds (I2C P4)")
+            run_sterilize_suction(5)
+            self._last_step_success = True
+            self.write_log("Sterilize_Suction: BTS OFF")
+            self.root.after(0, lambda: self.set_busy(False, "Ready. Sterilize_Suction completed."))
+        except Exception as exc:
+            self._last_step_success = False
+            try:
+                set_sterilize_bts(P4_SUCTION, False)
+            except Exception:
+                pass
+            self.write_log(f"ERROR: {exc}")
+            self.root.after(0, lambda: self.set_busy(False, "Error occurred during Sterilize_Suction."))
 
     def _create_next_experiment_dir(self, output_root="."):
         os.makedirs(output_root, exist_ok=True)
