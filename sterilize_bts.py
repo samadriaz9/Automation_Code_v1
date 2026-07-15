@@ -6,7 +6,8 @@ Wiring (second board @ 0x21):
 - P4: suction sterilize BTS
 
 Other pins on 0x21 (e.g. P0/P1 limit inputs) are kept HIGH so they stay as inputs.
-PCF8574 outputs are active-low: bit 0 = ON, bit 1 = OFF.
+BTS channels are active-high: pin HIGH = ON, pin LOW = OFF.
+At init/cleanup P3 and P4 are driven LOW (motors off); other pins remain HIGH.
 """
 
 import time
@@ -16,10 +17,12 @@ STERILIZE_PCF8574_ADDRESS = 0x21
 
 P3_ASSEMBLY = 3
 P4_SUCTION = 4
+_BTS_CHANNEL_MASK = (1 << P3_ASSEMBLY) | (1 << P4_SUCTION)
+_DEFAULT_STATE = 0xFF & ~_BTS_CHANNEL_MASK  # P3/P4 LOW (off), all other pins HIGH
 
 _bus = None
 _initialized = False
-_state = 0xFF
+_state = _DEFAULT_STATE
 
 
 def _ensure_i2c():
@@ -27,7 +30,7 @@ def _ensure_i2c():
     global _bus, _initialized, _state
     if not _initialized:
         _bus = smbus.SMBus(1)
-        _state = 0xFF
+        _state = _DEFAULT_STATE
         _bus.write_byte(STERILIZE_PCF8574_ADDRESS, _state)
         _initialized = True
 
@@ -42,8 +45,8 @@ def set_sterilize_bts(channel: int, on: bool):
     Turn a sterilize BTS channel ON or OFF.
 
     channel: P3_ASSEMBLY (3) or P4_SUCTION (4)
-    on=True  -> BTS ON  (pin driven LOW)
-    on=False -> BTS OFF (pin driven HIGH)
+    on=True  -> BTS ON  (pin driven HIGH)
+    on=False -> BTS OFF (pin driven LOW)
     """
     global _state
     if channel not in (P3_ASSEMBLY, P4_SUCTION):
@@ -51,9 +54,9 @@ def set_sterilize_bts(channel: int, on: bool):
 
     mask = 1 << channel
     if on:
-        _state &= ~mask
-    else:
         _state |= mask
+    else:
+        _state &= ~mask
     _write_state()
 
 
@@ -88,7 +91,7 @@ def cleanup():
     global _bus, _initialized, _state
     if _initialized and _bus is not None:
         try:
-            _state = 0xFF
+            _state = _DEFAULT_STATE
             _bus.write_byte(STERILIZE_PCF8574_ADDRESS, _state)
         except Exception:
             pass
