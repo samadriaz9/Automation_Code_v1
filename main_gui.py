@@ -1395,14 +1395,37 @@ class ExperimentApp:
         ).grid(row=section_row, column=0, columnspan=3, sticky="w", padx=6, pady=(10, 4))
         section_row += 1
 
-        manual_steps = [1] + list(range(4, 15))  # Actual experiment sequence.
+        manual_steps = [1] + list(range(4, 16))  # Actual experiment sequence (includes Sterilize).
         for idx, step_no in enumerate(manual_steps):
             label = self.step_labels[step_no - 1]
             btn = _make_manual_step_button(wrapper, label, step_no, base_color=(22, 98, 212))
             r = section_row + idx // 3
             c = idx % 3
             btn.grid(row=r, column=c, sticky="ew", padx=6, pady=6)
-        section_row += (len(manual_steps) + 2) // 3
+
+        placeholder_buttons = [
+            ("Action 1", lambda: self.write_log("Action 1: not yet configured.")),
+            ("Action 2", lambda: self.write_log("Action 2: not yet configured.")),
+        ]
+        base_idx = len(manual_steps)
+        for i, (label, cmd) in enumerate(placeholder_buttons):
+            idx = base_idx + i
+            btn = _make_rounded_button(
+                wrapper,
+                label,
+                cmd,
+                width=step_btn_w,
+                height=step_btn_h,
+                radius=step_btn_radius,
+                bg_rgb=(22, 98, 212),
+                font_size=step_btn_font,
+                parent_bg="#E9EEF7",
+            )
+            r = section_row + idx // 3
+            c = idx % 3
+            btn.grid(row=r, column=c, sticky="ew", padx=6, pady=6)
+
+        section_row += (len(manual_steps) + len(placeholder_buttons) + 2) // 3
 
         drain_btn = _make_rounded_button(
             wrapper,
