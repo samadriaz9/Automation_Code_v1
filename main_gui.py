@@ -120,8 +120,6 @@ from petri_dishes import (
 )
 from relay_control import P1, P7, run_relay, set_relay, cleanup as relay_cleanup
 from sterilize_bts import (
-    P2_ASSEMBLY,
-    P3_SUCTION,
     run_sterilize_assembly,
     run_sterilize_suction,
     set_sterilize_bts,
@@ -1862,7 +1860,7 @@ class ExperimentApp:
         except Exception as exc:
             self._last_step_success = False
             try:
-                set_sterilize_bts(P2_ASSEMBLY, False)
+                set_sterilize_bts(2, False)  # P2 assembly
             except Exception:
                 pass
             self.write_log(f"ERROR: {exc}")
@@ -1878,7 +1876,7 @@ class ExperimentApp:
         except Exception as exc:
             self._last_step_success = False
             try:
-                set_sterilize_bts(P3_SUCTION, False)
+                set_sterilize_bts(3, False)  # P3 suction
             except Exception:
                 pass
             self.write_log(f"ERROR: {exc}")

@@ -17,6 +17,20 @@ STERILIZE_PCF8574_ADDRESS = 0x21
 
 P2_ASSEMBLY = 2
 P3_SUCTION = 3
+# Legacy names from earlier wiring revisions (kept for older imports/scripts).
+P3_ASSEMBLY = P2_ASSEMBLY
+P4_SUCTION = P3_SUCTION
+
+__all__ = [
+    "P2_ASSEMBLY",
+    "P3_SUCTION",
+    "P3_ASSEMBLY",
+    "P4_SUCTION",
+    "run_sterilize_assembly",
+    "run_sterilize_suction",
+    "set_sterilize_bts",
+    "cleanup",
+]
 _INVERTED_CHANNELS = {P2_ASSEMBLY}
 _BTS_CHANNEL_MASK = (1 << P2_ASSEMBLY) | (1 << P3_SUCTION)
 # P2 HIGH (off via inverter), P3 LOW (off active-high), other pins HIGH
