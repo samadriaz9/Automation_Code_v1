@@ -6,8 +6,8 @@ Wiring (second board @ 0x21):
 - P3: suction sterilize BTS
 
 Other pins on 0x21 (e.g. P0/P1 limit inputs) are kept HIGH so they stay as inputs.
-BTS channels are active-high: pin HIGH = ON, pin LOW = OFF.
-At init/cleanup P2 and P3 are driven LOW (motors off); other pins remain HIGH.
+- P2 (assembly): logic inverter installed — pin LOW = motor ON, pin HIGH = motor OFF
+- P3 (suction): active-high — pin HIGH = motor ON, pin LOW = motor OFF
 """
 
 import time
@@ -17,8 +17,10 @@ STERILIZE_PCF8574_ADDRESS = 0x21
 
 P2_ASSEMBLY = 2
 P3_SUCTION = 3
+_INVERTED_CHANNELS = {P2_ASSEMBLY}
 _BTS_CHANNEL_MASK = (1 << P2_ASSEMBLY) | (1 << P3_SUCTION)
-_DEFAULT_STATE = 0xFF & ~_BTS_CHANNEL_MASK  # P2/P3 LOW (off), all other pins HIGH
+# P2 HIGH (off via inverter), P3 LOW (off active-high), other pins HIGH
+_DEFAULT_STATE = 0xFF & ~(1 << P3_SUCTION)
 
 _bus = None
 _initialized = False
@@ -45,18 +47,25 @@ def set_sterilize_bts(channel: int, on: bool):
     Turn a sterilize BTS channel ON or OFF.
 
     channel: P2_ASSEMBLY (2) or P3_SUCTION (3)
-    on=True  -> BTS ON  (pin driven HIGH)
-    on=False -> BTS OFF (pin driven LOW)
+    on=True  -> BTS ON
+    on=False -> BTS OFF
     """
     global _state
     if channel not in (P2_ASSEMBLY, P3_SUCTION):
         raise ValueError(f"channel must be P2_ASSEMBLY ({P2_ASSEMBLY}) or P3_SUCTION ({P3_SUCTION})")
 
     mask = 1 << channel
+    inverted = channel in _INVERTED_CHANNELS
     if on:
-        _state |= mask
+        if inverted:
+            _state &= ~mask  # LOW through inverter -> motor ON
+        else:
+            _state |= mask   # HIGH -> motor ON
     else:
-        _state &= ~mask
+        if inverted:
+            _state |= mask   # HIGH through inverter -> motor OFF
+        else:
+            _state &= ~mask  # LOW -> motor OFF
     _write_state()
 
 
