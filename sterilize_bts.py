@@ -2,12 +2,11 @@
 Sterilize BTS motor control via the second cascaded PCF8574 I2C expander.
 
 Wiring (second board @ 0x21):
-- P2: assembly sterilize BTS
-- P3: suction sterilize BTS
+- P2: suction sterilize BTS
+- P3: assembly sterilize BTS
 
 Other pins on 0x21 (e.g. P0/P1 limit inputs) are kept HIGH so they stay as inputs.
-- P2 (assembly): logic inverter installed — pin LOW = motor ON, pin HIGH = motor OFF
-- P3 (suction): logic inverter installed — pin LOW = motor ON, pin HIGH = motor OFF
+Both channels use logic inverters — pin LOW = motor ON, pin HIGH = motor OFF.
 """
 
 import time
@@ -15,24 +14,26 @@ import smbus
 
 STERILIZE_PCF8574_ADDRESS = 0x21
 
-P2_ASSEMBLY = 2
-P3_SUCTION = 3
-# Legacy names from earlier wiring revisions (kept for older imports/scripts).
-P3_ASSEMBLY = P2_ASSEMBLY
-P4_SUCTION = P3_SUCTION
+P2_SUCTION = 2
+P3_ASSEMBLY = 3
+# Legacy aliases (older scripts may import these names).
+P2_ASSEMBLY = P3_ASSEMBLY
+P3_SUCTION = P2_SUCTION
+P4_SUCTION = P2_SUCTION
 
 __all__ = [
+    "P2_SUCTION",
+    "P3_ASSEMBLY",
     "P2_ASSEMBLY",
     "P3_SUCTION",
-    "P3_ASSEMBLY",
     "P4_SUCTION",
     "run_sterilize_assembly",
     "run_sterilize_suction",
     "set_sterilize_bts",
     "cleanup",
 ]
-_INVERTED_CHANNELS = {P2_ASSEMBLY, P3_SUCTION}
-_BTS_CHANNEL_MASK = (1 << P2_ASSEMBLY) | (1 << P3_SUCTION)
+_INVERTED_CHANNELS = {P2_SUCTION, P3_ASSEMBLY}
+_BTS_CHANNEL_MASK = (1 << P2_SUCTION) | (1 << P3_ASSEMBLY)
 # P2/P3 HIGH (off via inverters), all other pins HIGH
 _DEFAULT_STATE = 0xFF
 
@@ -60,13 +61,13 @@ def set_sterilize_bts(channel: int, on: bool):
     """
     Turn a sterilize BTS channel ON or OFF.
 
-    channel: P2_ASSEMBLY (2) or P3_SUCTION (3)
+    channel: P3_ASSEMBLY (3) or P2_SUCTION (2)
     on=True  -> BTS ON
     on=False -> BTS OFF
     """
     global _state
-    if channel not in (P2_ASSEMBLY, P3_SUCTION):
-        raise ValueError(f"channel must be P2_ASSEMBLY ({P2_ASSEMBLY}) or P3_SUCTION ({P3_SUCTION})")
+    if channel not in (P2_SUCTION, P3_ASSEMBLY):
+        raise ValueError(f"channel must be P3_ASSEMBLY ({P3_ASSEMBLY}) or P2_SUCTION ({P2_SUCTION})")
 
     mask = 1 << channel
     inverted = channel in _INVERTED_CHANNELS
@@ -89,11 +90,11 @@ def run_sterilize_assembly(seconds: float = 5.0):
         raise ValueError("seconds must be >= 0")
 
     _ensure_i2c()
-    print(f"Sterilize_Assembly: BTS ON for {seconds}s (PCF8574 P2)")
-    set_sterilize_bts(P2_ASSEMBLY, True)
+    print(f"Sterilize_Assembly: BTS ON for {seconds}s (PCF8574 P3)")
+    set_sterilize_bts(P3_ASSEMBLY, True)
     time.sleep(seconds)
     print("Sterilize_Assembly: BTS OFF")
-    set_sterilize_bts(P2_ASSEMBLY, False)
+    set_sterilize_bts(P3_ASSEMBLY, False)
 
 
 def run_sterilize_suction(seconds: float = 5.0):
@@ -102,11 +103,11 @@ def run_sterilize_suction(seconds: float = 5.0):
         raise ValueError("seconds must be >= 0")
 
     _ensure_i2c()
-    print(f"Sterilize_Suction: BTS ON for {seconds}s (PCF8574 P3)")
-    set_sterilize_bts(P3_SUCTION, True)
+    print(f"Sterilize_Suction: BTS ON for {seconds}s (PCF8574 P2)")
+    set_sterilize_bts(P2_SUCTION, True)
     time.sleep(seconds)
     print("Sterilize_Suction: BTS OFF")
-    set_sterilize_bts(P3_SUCTION, False)
+    set_sterilize_bts(P2_SUCTION, False)
 
 
 def cleanup():

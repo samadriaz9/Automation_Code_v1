@@ -1852,7 +1852,7 @@ class ExperimentApp:
 
     def _run_sterilize_assembly_worker(self):
         try:
-            self.write_log("Sterilize_Assembly: BTS ON for 5 seconds (I2C P2)")
+            self.write_log("Sterilize_Assembly: BTS ON for 5 seconds (I2C P3)")
             run_sterilize_assembly(5)
             self._last_step_success = True
             self.write_log("Sterilize_Assembly: BTS OFF")
@@ -1860,7 +1860,7 @@ class ExperimentApp:
         except Exception as exc:
             self._last_step_success = False
             try:
-                set_sterilize_bts(2, False)  # P2 assembly
+                set_sterilize_bts(3, False)  # P3 assembly
             except Exception:
                 pass
             self.write_log(f"ERROR: {exc}")
@@ -1868,7 +1868,7 @@ class ExperimentApp:
 
     def _run_sterilize_suction_worker(self):
         try:
-            self.write_log("Sterilize_Suction: BTS ON for 5 seconds (I2C P3)")
+            self.write_log("Sterilize_Suction: BTS ON for 5 seconds (I2C P2)")
             run_sterilize_suction(5)
             self._last_step_success = True
             self.write_log("Sterilize_Suction: BTS OFF")
@@ -1876,7 +1876,7 @@ class ExperimentApp:
         except Exception as exc:
             self._last_step_success = False
             try:
-                set_sterilize_bts(3, False)  # P3 suction
+                set_sterilize_bts(2, False)  # P2 suction
             except Exception:
                 pass
             self.write_log(f"ERROR: {exc}")
