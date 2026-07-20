@@ -7,7 +7,7 @@ Wiring (second board @ 0x21):
 
 Other pins on 0x21 (e.g. P0/P1 limit inputs) are kept HIGH so they stay as inputs.
 - P2 (assembly): logic inverter installed — pin LOW = motor ON, pin HIGH = motor OFF
-- P3 (suction): active-high — pin HIGH = motor ON, pin LOW = motor OFF
+- P3 (suction): logic inverter installed — pin LOW = motor ON, pin HIGH = motor OFF
 """
 
 import time
@@ -31,10 +31,10 @@ __all__ = [
     "set_sterilize_bts",
     "cleanup",
 ]
-_INVERTED_CHANNELS = {P2_ASSEMBLY}
+_INVERTED_CHANNELS = {P2_ASSEMBLY, P3_SUCTION}
 _BTS_CHANNEL_MASK = (1 << P2_ASSEMBLY) | (1 << P3_SUCTION)
-# P2 HIGH (off via inverter), P3 LOW (off active-high), other pins HIGH
-_DEFAULT_STATE = 0xFF & ~(1 << P3_SUCTION)
+# P2/P3 HIGH (off via inverters), all other pins HIGH
+_DEFAULT_STATE = 0xFF
 
 _bus = None
 _initialized = False
