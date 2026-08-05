@@ -1829,7 +1829,7 @@ class ExperimentApp:
         if self.is_busy:
             return
         self._last_step_success = None
-        self.set_busy(True, "Running Sterilize_Suction for 5 seconds...")
+        self.set_busy(True, "Running Sterilize_Suction (pulse + pipe/pump)...")
         self.root.after(10, self._run_sterilize_suction_worker)
 
     def _run_waste_solenoid_pulse_worker(self):
@@ -1876,8 +1876,17 @@ class ExperimentApp:
         try:
             self.write_log("Sterilize_Suction: BTS ON for 5 seconds (I2C P2)")
             run_sterilize_suction(5)
-            self._last_step_success = True
             self.write_log("Sterilize_Suction: BTS OFF")
+            self.write_log("Sterilize_Suction: homing and pipe/pump cycle")
+            suction_pipe_home()
+            suction_pump_home()
+            suction_pump_up(80)
+            suction_pipe_up(500)
+            for _ in range(10):
+                suction_pump_up(10)
+                suction_pump_down(10)
+            self._last_step_success = True
+            self.write_log("Sterilize_Suction: completed")
             self.root.after(0, lambda: self.set_busy(False, "Ready. Sterilize_Suction completed."))
         except Exception as exc:
             self._last_step_success = False
