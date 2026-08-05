@@ -123,6 +123,7 @@ from sterilize_bts import (
     run_sterilize_assembly,
     run_sterilize_suction,
     set_sterilize_bts,
+    restore_shared_expander,
     cleanup as sterilize_bts_cleanup,
 )
 from solinoid_value_drain import cleanup as drain_solenoid_cleanup
@@ -1877,11 +1878,20 @@ class ExperimentApp:
             self.write_log("Sterilize_Suction: BTS ON for 5 seconds (I2C P2)")
             run_sterilize_suction(5)
             self.write_log("Sterilize_Suction: BTS OFF")
-            self.write_log("Sterilize_Suction: homing and pipe/pump cycle")
+            # Same PCF8574 @ 0x21 as suction_pipe limit — restore pins, then re-init pipe I2C.
+            restore_shared_expander()
+            suction_pipe_cleanup()
+            time.sleep(0.2)
+
+            self.write_log("Sterilize_Suction: suction_pipe_home()")
             suction_pipe_home()
+            self.write_log("Sterilize_Suction: suction_pump_home()")
             suction_pump_home()
+            self.write_log("Sterilize_Suction: suction_pump_up(80)")
             suction_pump_up(80)
+            self.write_log("Sterilize_Suction: suction_pipe_up(500)")
             suction_pipe_up(500)
+            self.write_log("Sterilize_Suction: pump up/down x10 (10 steps)")
             for _ in range(10):
                 suction_pump_up(10)
                 suction_pump_down(10)
@@ -1892,6 +1902,10 @@ class ExperimentApp:
             self._last_step_success = False
             try:
                 set_sterilize_bts(2, False)  # P2 suction
+            except Exception:
+                pass
+            try:
+                restore_shared_expander()
             except Exception:
                 pass
             self.write_log(f"ERROR: {exc}")

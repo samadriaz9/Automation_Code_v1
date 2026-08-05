@@ -30,6 +30,7 @@ __all__ = [
     "run_sterilize_assembly",
     "run_sterilize_suction",
     "set_sterilize_bts",
+    "restore_shared_expander",
     "cleanup",
 ]
 _INVERTED_CHANNELS = {P2_SUCTION, P3_ASSEMBLY}
@@ -108,6 +109,19 @@ def run_sterilize_suction(seconds: float = 5.0):
     time.sleep(seconds)
     print("Sterilize_Suction: BTS OFF")
     set_sterilize_bts(P2_SUCTION, False)
+
+
+def restore_shared_expander():
+    """
+    Drive all 0x21 pins HIGH (BTS off / limits as inputs).
+
+    Call after a sterilize pulse before suction_pipe / incubator_lid
+    read limit switches on the same PCF8574.
+    """
+    global _state
+    _ensure_i2c()
+    _state = _DEFAULT_STATE
+    _write_state()
 
 
 def cleanup():
