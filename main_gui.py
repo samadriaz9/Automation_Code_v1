@@ -1829,7 +1829,7 @@ class ExperimentApp:
         if self.is_busy:
             return
         self._last_step_success = None
-        self.set_busy(True, "Running Sterilize_Suction (pipe/pump cycle)...")
+        self.set_busy(True, "Running Sterilize_Suction for 5 seconds...")
         self.root.after(10, self._run_sterilize_suction_worker)
 
     def _run_waste_solenoid_pulse_worker(self):
@@ -1874,19 +1874,17 @@ class ExperimentApp:
 
     def _run_sterilize_suction_worker(self):
         try:
-            self.write_log("Sterilize_Suction: homing suction pipe/pump")
-            suction_pipe_home()
-            suction_pump_home()
-            suction_pipe_up(300)
-            self.write_log("Sterilize_Suction: pump up/down x3 (1245 steps)")
-            for _ in range(3):
-                suction_pump_up(1245)
-                suction_pump_down(1245)
+            self.write_log("Sterilize_Suction: BTS ON for 5 seconds (I2C P2)")
+            run_sterilize_suction(5)
             self._last_step_success = True
-            self.write_log("Sterilize_Suction: completed")
+            self.write_log("Sterilize_Suction: BTS OFF")
             self.root.after(0, lambda: self.set_busy(False, "Ready. Sterilize_Suction completed."))
         except Exception as exc:
             self._last_step_success = False
+            try:
+                set_sterilize_bts(2, False)  # P2 suction
+            except Exception:
+                pass
             self.write_log(f"ERROR: {exc}")
             self.root.after(0, lambda: self.set_busy(False, "Error occurred during Sterilize_Suction."))
 
