@@ -1822,7 +1822,7 @@ class ExperimentApp:
         if self.is_busy:
             return
         self._last_step_success = None
-        self.set_busy(True, "Running Sterilize_Assembly for 5 seconds...")
+        self.set_busy(True, "Running Sterilize_Assembly (filtration position + pump 5s)...")
         self.root.after(10, self._run_sterilize_assembly_worker)
 
     def run_sterilize_suction_pulse(self):
@@ -1852,6 +1852,12 @@ class ExperimentApp:
 
     def _run_sterilize_assembly_worker(self):
         try:
+            self.write_log("Sterilize_Assembly: positioning filtration unit/flask")
+            filteration_unit_config()
+            filteration_flask_config()
+            Filteration_flask_up(10)
+            Filteration_unit_up(850)
+            time.sleep(1)
             self.write_log("Sterilize_Assembly: BTS ON for 5 seconds (I2C P3)")
             run_sterilize_assembly(5)
             self._last_step_success = True
