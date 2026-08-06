@@ -1902,6 +1902,8 @@ class ExperimentApp:
             for _ in range(jog_count):
                 suction_pump_up(jog_steps)
                 suction_pump_down(jog_steps)
+            self.write_log("Sterilize_Suction: suction_pipe_home() (final)")
+            suction_pipe_home()
             self._last_step_success = True
             self.write_log("Sterilize_Suction: completed")
             self.root.after(0, lambda: self.set_busy(False, "Ready. Sterilize_Suction completed."))
