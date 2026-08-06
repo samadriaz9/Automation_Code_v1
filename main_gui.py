@@ -1876,8 +1876,8 @@ class ExperimentApp:
     def _run_sterilize_suction_worker(self):
         # --- tweak these ---
         bts_seconds = 5
-        pump_up_steps = 500
-        pipe_up_steps = 500
+        pump_up_steps = 600
+        pipe_up_steps = 600
         jog_count = 10
         jog_steps = 10
         # -------------------
