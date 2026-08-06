@@ -1876,10 +1876,10 @@ class ExperimentApp:
     def _run_sterilize_suction_worker(self):
         # --- tweak these ---
         bts_seconds = 5
-        pump_up_steps = 570
-        pipe_up_steps = 900
-        jog_count = 2
-        jog_steps = 2
+        pump_up_steps = 580
+        pipe_up_steps = 1000
+        jog_count = 20
+        jog_steps = 20
         # -------------------
         try:
             self.write_log(f"Sterilize_Suction: BTS ON for {bts_seconds} seconds (I2C P2)")
