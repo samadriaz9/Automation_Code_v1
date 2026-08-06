@@ -1874,9 +1874,16 @@ class ExperimentApp:
             self.root.after(0, lambda: self.set_busy(False, "Error occurred during Sterilize_Assembly."))
 
     def _run_sterilize_suction_worker(self):
+        # --- tweak these ---
+        bts_seconds = 5
+        pump_up_steps = 500
+        pipe_up_steps = 500
+        jog_count = 10
+        jog_steps = 10
+        # -------------------
         try:
-            self.write_log("Sterilize_Suction: BTS ON for 5 seconds (I2C P2)")
-            run_sterilize_suction(5)
+            self.write_log(f"Sterilize_Suction: BTS ON for {bts_seconds} seconds (I2C P2)")
+            run_sterilize_suction(bts_seconds)
             self.write_log("Sterilize_Suction: BTS OFF")
             # Same PCF8574 @ 0x21 as suction_pipe limit — restore pins, then re-init pipe I2C.
             restore_shared_expander()
@@ -1887,14 +1894,14 @@ class ExperimentApp:
             suction_pipe_home()
             self.write_log("Sterilize_Suction: suction_pump_home()")
             suction_pump_home()
-            self.write_log("Sterilize_Suction: suction_pump_up(80)")
-            suction_pump_up(80)
-            self.write_log("Sterilize_Suction: suction_pipe_up(500)")
-            suction_pipe_up(500)
-            self.write_log("Sterilize_Suction: pump up/down x10 (10 steps)")
-            for _ in range(10):
-                suction_pump_up(10)
-                suction_pump_down(10)
+            self.write_log(f"Sterilize_Suction: suction_pump_up({pump_up_steps})")
+            suction_pump_up(pump_up_steps)
+            self.write_log(f"Sterilize_Suction: suction_pipe_up({pipe_up_steps})")
+            suction_pipe_up(pipe_up_steps)
+            self.write_log(f"Sterilize_Suction: pump up/down x{jog_count} ({jog_steps} steps)")
+            for _ in range(jog_count):
+                suction_pump_up(jog_steps)
+                suction_pump_down(jog_steps)
             self._last_step_success = True
             self.write_log("Sterilize_Suction: completed")
             self.root.after(0, lambda: self.set_busy(False, "Ready. Sterilize_Suction completed."))
