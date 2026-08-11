@@ -259,7 +259,7 @@ try:
     suction_pipe_down(600)
     time.sleep(1)
     suction_pipe_home()
-    suction_pump_up(1245)
+    suction_pump_up(1255)
     filteration_suction_pump_on(100)
     upper_suction_pump_off()
     suction_pipe_up(400)
