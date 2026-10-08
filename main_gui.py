@@ -1420,38 +1420,57 @@ class ExperimentApp:
         )
         drain_valve_btn.grid(row=section_row, column=0, sticky="ew", padx=6, pady=6)
 
-        manual_steps = [1] + list(range(4, 15))  # Actual experiment sequence.
-        for idx, step_no in enumerate(manual_steps):
-            label = self.step_labels[step_no - 1]
-            btn = _make_manual_step_button(wrapper, label, step_no, base_color=(22, 98, 212))
-            slot = idx + 1  # Drain solenoid occupies the first slot.
-            r = section_row + slot // 3
-            c = slot % 3
-            btn.grid(row=r, column=c, sticky="ew", padx=6, pady=6)
-
-        placeholder_buttons = [
-            ("Sterilize_Assembly", self.run_sterilize_assembly_pulse),
-            ("Sterilize_Suction", self.run_sterilize_suction_pulse),
-        ]
-        base_idx = len(manual_steps) + 1
-        for i, (label, cmd) in enumerate(placeholder_buttons):
-            idx = base_idx + i
+        def _place_grid_button(slot, label, command, color):
             btn = _make_rounded_button(
                 wrapper,
                 label,
-                cmd,
+                command,
                 width=step_btn_w,
                 height=step_btn_h,
                 radius=step_btn_radius,
-                bg_rgb=(22, 98, 212),
+                bg_rgb=color,
                 font_size=step_btn_font,
                 parent_bg="#E9EEF7",
             )
-            r = section_row + idx // 3
-            c = idx % 3
-            btn.grid(row=r, column=c, sticky="ew", padx=6, pady=6)
+            btn.grid(
+                row=section_row + slot // 3,
+                column=slot % 3,
+                sticky="ew",
+                padx=6,
+                pady=6,
+            )
+            return btn
 
-        section_row += (1 + len(manual_steps) + len(placeholder_buttons) + 2) // 3
+        next_slot = 1  # Drain solenoid occupies slot 0.
+        manual_steps = [1] + list(range(4, 15))  # Actual experiment sequence.
+        for step_no in manual_steps:
+            label = self.step_labels[step_no - 1]
+            btn = _make_manual_step_button(wrapper, label, step_no, base_color=(22, 98, 212))
+            btn.grid(
+                row=section_row + next_slot // 3,
+                column=next_slot % 3,
+                sticky="ew",
+                padx=6,
+                pady=6,
+            )
+            next_slot += 1
+            if step_no == 13:  # Immediately after Start Pictures.
+                _place_grid_button(
+                    next_slot,
+                    "Process Images",
+                    lambda: self.run_process_latest_experiment(popup),
+                    (16, 122, 92),
+                )
+                next_slot += 1
+
+        for label, cmd in (
+            ("Sterilize_Assembly", self.run_sterilize_assembly_pulse),
+            ("Sterilize_Suction", self.run_sterilize_suction_pulse),
+        ):
+            _place_grid_button(next_slot, label, cmd, (22, 98, 212))
+            next_slot += 1
+
+        section_row += (next_slot + 2) // 3
 
         drain_btn = _make_rounded_button(
             wrapper,
@@ -1829,6 +1848,214 @@ class ExperimentApp:
             self._last_step_success = False
             self.write_log(f"ERROR: {exc}")
             self.root.after(0, lambda: self.set_busy(False, "Error occurred. Check log."))
+
+    def _latest_data_experiment(self):
+        if not os.path.isdir(DATA_DIR):
+            return None, None
+        best_idx = None
+        best_path = None
+        for name in os.listdir(DATA_DIR):
+            path = os.path.join(DATA_DIR, name)
+            if not os.path.isdir(path) or not name.startswith("exp_"):
+                continue
+            suffix = name[4:]
+            if not suffix.isdigit():
+                continue
+            idx = int(suffix)
+            if best_idx is None or idx > best_idx:
+                best_idx = idx
+                best_path = path
+        return best_path, best_idx
+
+    def _experiment_image_set(self, exp_path):
+        from modelimg import list_numbered_jpg_paths
+
+        direct = list_numbered_jpg_paths(exp_path)
+        if direct:
+            return exp_path, direct
+        newest_dir = None
+        newest_paths = []
+        newest_mtime = -1
+        try:
+            names = os.listdir(exp_path)
+        except OSError:
+            return None, []
+        for name in names:
+            sub = os.path.join(exp_path, name)
+            if not os.path.isdir(sub):
+                continue
+            paths = list_numbered_jpg_paths(sub)
+            if not paths:
+                continue
+            mtime = os.path.getmtime(sub)
+            if mtime >= newest_mtime:
+                newest_mtime = mtime
+                newest_dir = sub
+                newest_paths = paths
+        return newest_dir, newest_paths
+
+    def run_process_latest_experiment(self, parent):
+        if self.is_busy:
+            return
+        exp_path, exp_idx = self._latest_data_experiment()
+        if exp_path is None:
+            messagebox.showinfo(
+                "Process Images",
+                "No experiment folder was found in Data.",
+                parent=parent,
+            )
+            return
+        exp_name = f"exp_{exp_idx:02d}"
+        image_dir, image_paths = self._experiment_image_set(exp_path)
+        if not image_paths:
+            messagebox.showinfo(
+                "Process Images",
+                f"{exp_name} has no numbered pictures (1.jpg, 2.jpg, ...).",
+                parent=parent,
+            )
+            return
+        output_path = os.path.join(DATA_DIR, f"{exp_name}_mosaic.png")
+        if os.path.isfile(output_path):
+            redo = messagebox.askyesno(
+                "Result already exists",
+                f"{exp_name}_mosaic.png already exists.\n\nReprocess {exp_name}?\n\nYes = reprocess\nNo = cancel",
+                parent=parent,
+            )
+            if not redo:
+                return
+        self._last_step_success = None
+        self.set_busy(True, f"Processing {exp_name}...")
+        self.write_log(
+            f"Model mosaic: {exp_name} ({len(image_paths)} images) from {image_dir}"
+        )
+        self._show_model_progress(parent, f"{exp_name}: loading model...")
+        threading.Thread(
+            target=self._process_latest_experiment_worker,
+            args=(image_paths, output_path, exp_name),
+            daemon=True,
+        ).start()
+
+    def _show_model_progress(self, parent, message):
+        blocker = tk.Frame(parent, bg="#10233F")
+        blocker.place(relx=0, rely=0, relwidth=1, relheight=1)
+        card = tk.Frame(blocker, bg="#0F2C52", highlightthickness=2, highlightbackground="#D6E4F5")
+        card.place(relx=0.5, rely=0.5, anchor="center", width=680, height=230)
+        tk.Label(
+            card,
+            text="Processing images",
+            bg="#0F2C52",
+            fg="white",
+            font=("TkDefaultFont", 20, "bold"),
+        ).pack(pady=(22, 6))
+        label = tk.Label(
+            card,
+            text=message,
+            bg="#0F2C52",
+            fg="#D6E4F5",
+            font=("TkDefaultFont", 14),
+        )
+        label.pack(pady=(0, 14))
+        var = tk.IntVar(value=0)
+        bar = ttk.Progressbar(card, maximum=100, variable=var, mode="indeterminate", length=600)
+        bar.pack(pady=(0, 10))
+        bar.start(12)
+        tk.Label(
+            card,
+            text="Please wait. Other buttons stay locked until this finishes.",
+            bg="#0F2C52",
+            fg="#9FB4CC",
+            font=("TkDefaultFont", 12),
+        ).pack()
+        blocker.lift()
+        self._model_progress_blocker = blocker
+        self._model_progress_bar = bar
+        self._model_progress_label = label
+        self._model_progress_var = var
+        self._model_progress_indeterminate = True
+        try:
+            parent.update_idletasks()
+        except Exception:
+            pass
+
+    def _set_model_progress(self, current, total, message):
+        label = getattr(self, "_model_progress_label", None)
+        bar = getattr(self, "_model_progress_bar", None)
+        var = getattr(self, "_model_progress_var", None)
+        if label is not None:
+            try:
+                label.config(text=message)
+            except Exception:
+                label = None
+        self.status_var.set(message)
+        if bar is None or var is None or total <= 0 or current <= 0:
+            return
+        if getattr(self, "_model_progress_indeterminate", False):
+            try:
+                bar.stop()
+                bar.config(mode="determinate")
+            except Exception:
+                pass
+            self._model_progress_indeterminate = False
+        try:
+            var.set(max(0, min(100, int(round(100 * current / total)))))
+        except Exception:
+            pass
+
+    def _close_model_progress(self):
+        blocker = getattr(self, "_model_progress_blocker", None)
+        self._model_progress_blocker = None
+        self._model_progress_bar = None
+        self._model_progress_label = None
+        self._model_progress_var = None
+        self._model_progress_indeterminate = False
+        if blocker is not None:
+            try:
+                blocker.destroy()
+            except Exception:
+                pass
+
+    def _finish_model_job(self, ok, message, detail=None):
+        self._close_model_progress()
+        parent = getattr(self, "_run_experiment_popup", None)
+        try:
+            if parent is None or not parent.winfo_exists():
+                parent = self.root
+        except Exception:
+            parent = self.root
+        if ok:
+            self.write_log(message)
+            messagebox.showinfo("Process Images", message, parent=parent)
+            self._last_step_success = True
+            self.set_busy(False, message)
+        else:
+            self.write_log(f"ERROR: {detail or message}")
+            messagebox.showerror("Process Images", detail or message, parent=parent)
+            self._last_step_success = False
+            self.set_busy(False, "Error while processing images.")
+
+    def _process_latest_experiment_worker(self, image_paths, output_path, exp_name):
+        try:
+            from modelimg import process_images_to_mosaic
+
+            def on_progress(current, total, message):
+                self.root.after(
+                    0,
+                    lambda c=current, t=total, m=message: self._set_model_progress(c, t, m),
+                )
+
+            saved, detected = process_images_to_mosaic(
+                image_paths,
+                output_path,
+                on_progress=on_progress,
+            )
+            done = f"Saved {os.path.basename(saved)} ({detected} detections)."
+            self.root.after(0, lambda m=done: self._finish_model_job(True, m))
+        except Exception as exc:
+            err = str(exc)
+            self.root.after(
+                0,
+                lambda e=err: self._finish_model_job(False, "Error while processing images.", e),
+            )
 
     def run_drain_solenoid_pulse(self):
         if self.is_busy:
