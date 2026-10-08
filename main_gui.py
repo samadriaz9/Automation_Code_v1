@@ -103,7 +103,7 @@ from filteration_suction_pump import (
     cleanup as filteration_suction_cleanup,
 )
 from filteration_unit import Filteration_unit_up, filteration_unit_config, cleanup as filteration_unit_cleanup
-from imaging import start_imaging_capture_pattern
+from imaging import DATA_DIR, start_imaging_capture_pattern
 from incubator_lid import incubator_lid_home, incubator_lid_up, cleanup as incubator_lid_cleanup
 from media_dispensor import (
     Media_dispensor_home,
@@ -1798,7 +1798,7 @@ class ExperimentApp:
     def _run_incubate_and_picture_worker(self, profiles):
         try:
             self.write_log("Running combined flow: Shift -> Incubate -> Picture")
-            exp_dir = self._create_next_experiment_dir(".")
+            exp_dir = self._create_next_experiment_dir(DATA_DIR)
             self.write_log(f"Experiment image root: {exp_dir}")
             for idx, (target_temp, minutes) in enumerate(profiles, start=1):
                 self.write_log(f"Stage {idx}: shift to incubation region")
@@ -1963,7 +1963,7 @@ class ExperimentApp:
             self.write_log(f"ERROR: {exc}")
             self.root.after(0, lambda: self.set_busy(False, "Error occurred during Sterilize_Suction."))
 
-    def _create_next_experiment_dir(self, output_root="."):
+    def _create_next_experiment_dir(self, output_root=DATA_DIR):
         os.makedirs(output_root, exist_ok=True)
         idx = 1
         while True:

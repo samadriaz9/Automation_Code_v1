@@ -24,13 +24,17 @@ from camera_module import Camera_up, Camera_down
 from petri_dishes import petri_dishes_up
 
 
+# Pictures live next to the code, under Data/exp_01, Data/exp_02, ...
+DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Data")
+
+
 def _ensure_dir(path):
     os.makedirs(path, exist_ok=True)
     return path
 
 
-def _next_exp_dir(output_root="."):
-    """Create and return next sequential experiment folder: exp_01, exp_02, ..."""
+def _next_exp_dir(output_root=DATA_DIR):
+    """Create and return next sequential experiment folder: Data/exp_01, Data/exp_02, ..."""
     output_root = _ensure_dir(output_root)
     idx = 1
     while True:
@@ -220,7 +224,7 @@ def _write_mosaic(output_dir, mosaic, mosaic_name):
 
 
 def start_imaging_capture_pattern(
-    output_root=".",
+    output_root=DATA_DIR,
     experiment_dir=None,
     stage_subdir=None,
     camera_device_index=0,
