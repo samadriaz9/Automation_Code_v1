@@ -1398,6 +1398,15 @@ class ExperimentApp:
         _refresh_insert_media_label()
         section_row += 1
 
+        tk.Label(
+            wrapper,
+            text="Run Experiment Manually Step by Step",
+            background="#E9EEF7",
+            foreground="#0F2C52",
+            font=("TkDefaultFont", 16, "bold"),
+        ).grid(row=section_row, column=0, columnspan=3, sticky="w", padx=6, pady=(10, 4))
+        section_row += 1
+
         drain_valve_btn = _make_rounded_button(
             wrapper,
             "Drain Solenoid 5 sec",
@@ -1410,30 +1419,21 @@ class ExperimentApp:
             parent_bg="#E9EEF7",
         )
         drain_valve_btn.grid(row=section_row, column=0, sticky="ew", padx=6, pady=6)
-        section_row += 1
-
-        tk.Label(
-            wrapper,
-            text="Run Experiment Manually Step by Step",
-            background="#E9EEF7",
-            foreground="#0F2C52",
-            font=("TkDefaultFont", 16, "bold"),
-        ).grid(row=section_row, column=0, columnspan=3, sticky="w", padx=6, pady=(10, 4))
-        section_row += 1
 
         manual_steps = [1] + list(range(4, 15))  # Actual experiment sequence.
         for idx, step_no in enumerate(manual_steps):
             label = self.step_labels[step_no - 1]
             btn = _make_manual_step_button(wrapper, label, step_no, base_color=(22, 98, 212))
-            r = section_row + idx // 3
-            c = idx % 3
+            slot = idx + 1  # Drain solenoid occupies the first slot.
+            r = section_row + slot // 3
+            c = slot % 3
             btn.grid(row=r, column=c, sticky="ew", padx=6, pady=6)
 
         placeholder_buttons = [
             ("Sterilize_Assembly", self.run_sterilize_assembly_pulse),
             ("Sterilize_Suction", self.run_sterilize_suction_pulse),
         ]
-        base_idx = len(manual_steps)
+        base_idx = len(manual_steps) + 1
         for i, (label, cmd) in enumerate(placeholder_buttons):
             idx = base_idx + i
             btn = _make_rounded_button(
@@ -1451,7 +1451,7 @@ class ExperimentApp:
             c = idx % 3
             btn.grid(row=r, column=c, sticky="ew", padx=6, pady=6)
 
-        section_row += (len(manual_steps) + len(placeholder_buttons) + 2) // 3
+        section_row += (1 + len(manual_steps) + len(placeholder_buttons) + 2) // 3
 
         drain_btn = _make_rounded_button(
             wrapper,
