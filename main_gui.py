@@ -2461,7 +2461,7 @@ class ExperimentApp:
         self.root.after(10, lambda up=move_up: self._filter_move_worker(up))
 
     def _filter_move_worker(self, move_up):
-        steps = 1000
+        steps = 100
         try:
             if move_up:
                 self.write_log(f"Filter up: {steps} steps")
