@@ -223,6 +223,59 @@ def _write_mosaic(output_dir, mosaic, mosaic_name):
     return mosaic_path
 
 
+def stitch_capture_mosaic(
+    tiles,
+    rows,
+    cols,
+    flip_y=True,
+    axis_swap=True,
+    crop_top_px=600,
+    crop_right_px=600,
+):
+    """Stitch BGR tiles with the same layout and trim as ``mosaic.jpg``.
+
+    ``tiles`` is capture order: index 0 is ``1.jpg``.
+    """
+    rows = int(rows)
+    cols = int(cols)
+    if rows <= 0 or cols <= 0:
+        raise ValueError("rows and cols must be > 0")
+    if len(tiles) < rows * cols:
+        raise RuntimeError(f"Need {rows * cols} tiles, got {len(tiles)}")
+
+    first = tiles[0]
+    tile_h, tile_w = first.shape[:2]
+    channels = first.shape[2:] if len(first.shape) > 2 else ()
+    out_rows = cols if bool(axis_swap) else rows
+    out_cols = rows if bool(axis_swap) else cols
+    mosaic = np.zeros((out_rows * tile_h, out_cols * tile_w) + channels, dtype=first.dtype)
+
+    for mr in range(rows):
+        for mc in range(cols):
+            tile = tiles[mr * cols + mc]
+            if tile.shape[0] != tile_h or tile.shape[1] != tile_w:
+                tile = cv2.resize(tile, (tile_w, tile_h), interpolation=cv2.INTER_AREA)
+
+            if bool(axis_swap):
+                base_r = mc
+                base_c = mr
+                max_r = cols - 1
+                max_c = rows - 1
+            else:
+                base_r = mr
+                base_c = mc
+                max_r = rows - 1
+                max_c = cols - 1
+
+            dest_r = (max_r - base_r) if bool(flip_y) else base_r
+            dest_c = base_c
+            y0 = dest_r * tile_h
+            x0 = dest_c * tile_w
+            mosaic[y0 : y0 + tile_h, x0 : x0 + tile_w] = tile
+
+    return _trim_mosaic(mosaic, crop_top_px=int(crop_top_px), crop_right_px=int(crop_right_px))
+
+
 def start_imaging_capture_pattern(
     output_root=DATA_DIR,
     experiment_dir=None,

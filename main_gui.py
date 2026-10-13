@@ -1938,11 +1938,11 @@ class ExperimentApp:
                 parent=parent,
             )
             return
-        output_path = os.path.join(exp_path, f"{exp_name}_mosaic.png")
+        output_path = os.path.join(exp_path, f"{exp_name}_mosaic.jpg")
         if os.path.isfile(output_path):
             redo = messagebox.askyesno(
                 "Result already exists",
-                f"{exp_name}/{exp_name}_mosaic.png already exists.\n\nReprocess {exp_name}?\n\nYes = reprocess\nNo = cancel",
+                f"{exp_name}/{exp_name}_mosaic.jpg already exists.\n\nReprocess {exp_name}?\n\nYes = reprocess\nNo = cancel",
                 parent=parent,
             )
             if not redo:
@@ -2156,8 +2156,11 @@ class ExperimentApp:
         if exp_path is None:
             return None, None
         exp_name = f"exp_{exp_idx:02d}"
-        mosaic = os.path.join(exp_path, f"{exp_name}_mosaic.png")
+        mosaic = os.path.join(exp_path, f"{exp_name}_mosaic.jpg")
         if not os.path.isfile(mosaic):
+            legacy = os.path.join(exp_path, f"{exp_name}_mosaic.png")
+            mosaic = legacy if os.path.isfile(legacy) else None
+        if not mosaic:
             return exp_name, None
         return exp_name, mosaic
 

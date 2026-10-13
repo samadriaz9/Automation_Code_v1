@@ -544,9 +544,22 @@ def _mosaic_slot(image_number, total):
     return mr, mc, rows, cols
 
 
-def process_images_to_mosaic(image_paths, output_path, model_path=None, on_progress=None):
-    """Run YOLO on numbered images and save one annotated mosaic PNG.
+def _annotated_bgr(image_path, model):
+    """YOLO boxes on one tile, as BGR like the camera mosaic tiles."""
+    annotated, count = modelsApp.annotate_image(image_path, model)
+    rgb = np.array(annotated)
+    annotated.close()
+    if rgb.ndim == 2:
+        bgr = cv2.cvtColor(rgb, cv2.COLOR_GRAY2BGR)
+    else:
+        bgr = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
+    return bgr, count
 
+
+def process_images_to_mosaic(image_paths, output_path, model_path=None, on_progress=None):
+    """Run YOLO on numbered images and save one JPEG mosaic.
+
+    The stitch, 600 px trim, and JPEG write match the camera ``mosaic.jpg``.
     on_progress(current, total, message) is called from the worker thread.
     """
     if not image_paths:
@@ -556,48 +569,62 @@ def process_images_to_mosaic(image_paths, output_path, model_path=None, on_progr
     if on_progress:
         on_progress(0, total, "Loading model...")
 
+    from imaging import stitch_capture_mosaic
+
     weights = resolve_model_weights(model_path)
     model = YOLO(weights)
-    canvas = None
-    tile_w = tile_h = None
+    tiles = [None] * total
     total_detected = 0
 
     for done, path in enumerate(image_paths, start=1):
         image_number = int(os.path.splitext(os.path.basename(path))[0])
-        annotated, count = modelsApp.annotate_image(path, model)
+        bgr, count = _annotated_bgr(path, model)
+        slot = image_number - 1
+        if slot < 0 or slot >= total:
+            slot = done - 1
+        tiles[slot] = bgr
         total_detected += count
-        if canvas is None:
-            tile_w, tile_h = annotated.size
-            _, _, grid_rows, grid_cols = _mosaic_slot(image_number, total)
-            canvas = Image.new("RGB", (grid_cols * tile_w, grid_rows * tile_h), color="black")
-        elif annotated.size != (tile_w, tile_h):
-            annotated = annotated.resize((tile_w, tile_h), Image.BILINEAR)
-        row, col, _, _ = _mosaic_slot(image_number, total)
-        canvas.paste(annotated, (col * tile_w, row * tile_h))
-        annotated.close()
         if on_progress:
             on_progress(done, total, f"Processed image {done} of {total}")
 
-    if canvas is None:
-        raise RuntimeError("No images to process.")
+    if any(tile is None for tile in tiles):
+        raise RuntimeError("Numbered images are not a complete 1..N set.")
 
     if on_progress:
         on_progress(total, total, "Saving mosaic...")
 
-    array = np.array(canvas)
+    side = int(round(math.sqrt(total)))
+    if side > 0 and side * side == total:
+        mosaic = stitch_capture_mosaic(tiles, side, side)
+    else:
+        cols = max(1, int(math.ceil(math.sqrt(total))))
+        rows = int(math.ceil(total / float(cols)))
+        padded = list(tiles)
+        blank = np.zeros_like(tiles[0])
+        while len(padded) < rows * cols:
+            padded.append(blank)
+        mosaic = stitch_capture_mosaic(
+            padded, rows, cols, flip_y=False, axis_swap=False, crop_top_px=0, crop_right_px=0
+        )
+
+    tile_h = max(1, int(tiles[0].shape[0]))
     font_scale = max(1.6, tile_h / 240.0)
     thickness = max(2, int(round(tile_h / 90.0)))
     cv2.putText(
-        array,
+        mosaic,
         f"Total E.coli Detected: {total_detected}",
         (20, max(40, int(tile_h * 0.12))),
         cv2.FONT_HERSHEY_DUPLEX,
         font_scale,
-        (125, 246, 55),
+        (55, 246, 125),
         thickness,
     )
+
+    if output_path.lower().endswith(".png"):
+        output_path = output_path[:-4] + ".jpg"
     os.makedirs(os.path.dirname(os.path.abspath(output_path)) or ".", exist_ok=True)
-    Image.fromarray(array).save(output_path, "PNG")
+    if not cv2.imwrite(output_path, mosaic):
+        raise RuntimeError(f"Could not write mosaic: {output_path}")
     print(f"Result mosaic saved at {output_path} ({total_detected} detections)")
     return output_path, total_detected
 
