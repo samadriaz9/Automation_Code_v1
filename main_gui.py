@@ -21,6 +21,13 @@ import cv2
 from PIL import Image, ImageDraw, ImageFont, ImageTk
 import RPi.GPIO as GPIO
 
+# Fixed site used by Send Image (kit account on the E. coli server).
+SEND_UPLOAD_URL = "http://cispvt.com/ecoli_bio/API/upload_sample2.php"
+SEND_DEVICE_ID = "CIS_KIT_10"
+SEND_USER_ID = "17"
+SEND_LATITUDE = "33.96947238683682"
+SEND_LONGITUDE = "71.41897279140636"
+
 
 def _find_asset_path(filename, extra_candidates=None):
     """Find asset by filename in project folder or provided candidates."""
@@ -1462,6 +1469,13 @@ class ExperimentApp:
                     (16, 122, 92),
                 )
                 next_slot += 1
+                _place_grid_button(
+                    next_slot,
+                    "Send Image",
+                    lambda: self.run_send_latest_image(popup),
+                    (18, 92, 168),
+                )
+                next_slot += 1
 
         for label, cmd in (
             ("Sterilize_Assembly", self.run_sterilize_assembly_pulse),
@@ -1867,10 +1881,20 @@ class ExperimentApp:
                 best_path = path
         return best_path, best_idx
 
-    def _experiment_image_set(self, exp_path):
-        from modelimg import list_numbered_jpg_paths
+    def _numbered_jpg_paths(self, folder):
+        """1.jpg, 2.jpg, ... without importing the model."""
+        paths = []
+        idx = 1
+        while True:
+            path = os.path.join(folder, f"{idx}.jpg")
+            if not os.path.isfile(path):
+                break
+            paths.append(path)
+            idx += 1
+        return paths
 
-        direct = list_numbered_jpg_paths(exp_path)
+    def _experiment_image_set(self, exp_path):
+        direct = self._numbered_jpg_paths(exp_path)
         if direct:
             return exp_path, direct
         newest_dir = None
@@ -1884,7 +1908,7 @@ class ExperimentApp:
             sub = os.path.join(exp_path, name)
             if not os.path.isdir(sub):
                 continue
-            paths = list_numbered_jpg_paths(sub)
+            paths = self._numbered_jpg_paths(sub)
             if not paths:
                 continue
             mtime = os.path.getmtime(sub)
@@ -1914,68 +1938,124 @@ class ExperimentApp:
                 parent=parent,
             )
             return
-        output_path = os.path.join(DATA_DIR, f"{exp_name}_mosaic.png")
+        output_path = os.path.join(exp_path, f"{exp_name}_mosaic.png")
         if os.path.isfile(output_path):
             redo = messagebox.askyesno(
                 "Result already exists",
-                f"{exp_name}_mosaic.png already exists.\n\nReprocess {exp_name}?\n\nYes = reprocess\nNo = cancel",
+                f"{exp_name}/{exp_name}_mosaic.png already exists.\n\nReprocess {exp_name}?\n\nYes = reprocess\nNo = cancel",
                 parent=parent,
             )
             if not redo:
                 return
         self._last_step_success = None
         self.set_busy(True, f"Processing {exp_name}...")
+        self._show_model_progress(parent, f"{exp_name}: starting...")
+        try:
+            self.root.update()
+        except Exception:
+            pass
         self.write_log(
             f"Model mosaic: {exp_name} ({len(image_paths)} images) from {image_dir}"
         )
-        self._show_model_progress(parent, f"{exp_name}: loading model...")
-        threading.Thread(
-            target=self._process_latest_experiment_worker,
-            args=(image_paths, output_path, exp_name),
-            daemon=True,
-        ).start()
+
+        def _start_worker():
+            threading.Thread(
+                target=self._process_latest_experiment_worker,
+                args=(image_paths, output_path, exp_name),
+                daemon=True,
+            ).start()
+
+        self.root.after(30, _start_worker)
 
     def _show_model_progress(self, parent, message):
-        blocker = tk.Frame(parent, bg="#10233F")
-        blocker.place(relx=0, rely=0, relwidth=1, relheight=1)
-        card = tk.Frame(blocker, bg="#0F2C52", highlightthickness=2, highlightbackground="#D6E4F5")
-        card.place(relx=0.5, rely=0.5, anchor="center", width=680, height=230)
+        win = tk.Toplevel(parent)
+        win.title("Processing images")
+        win.configure(bg="#0F2C52")
+        win.resizable(False, False)
+        try:
+            win.transient(parent)
+        except Exception:
+            pass
+        try:
+            win.attributes("-topmost", True)
+        except Exception:
+            pass
+        # Stay up until processing finishes. Closing it would hide the bar
+        # while the model is still running.
+        win.protocol("WM_DELETE_WINDOW", lambda: None)
+
+        width, height = 640, 250
+        sw = self.root.winfo_screenwidth()
+        sh = self.root.winfo_screenheight()
+        x = max(0, (sw - width) // 2)
+        y = max(0, (sh - height) // 2)
+        win.geometry(f"{width}x{height}+{x}+{y}")
+
         tk.Label(
-            card,
+            win,
             text="Processing images",
             bg="#0F2C52",
             fg="white",
             font=("TkDefaultFont", 20, "bold"),
-        ).pack(pady=(22, 6))
+        ).pack(pady=(22, 8))
         label = tk.Label(
-            card,
+            win,
             text=message,
             bg="#0F2C52",
             fg="#D6E4F5",
             font=("TkDefaultFont", 14),
+            wraplength=580,
         )
-        label.pack(pady=(0, 14))
+        label.pack(pady=(0, 16))
         var = tk.IntVar(value=0)
-        bar = ttk.Progressbar(card, maximum=100, variable=var, mode="indeterminate", length=600)
-        bar.pack(pady=(0, 10))
+        bar = ttk.Progressbar(win, maximum=100, variable=var, mode="indeterminate", length=560)
+        bar.pack(pady=(0, 12))
         bar.start(12)
+        percent = tk.Label(
+            win,
+            text="0%",
+            bg="#0F2C52",
+            fg="white",
+            font=("TkDefaultFont", 16, "bold"),
+        )
+        percent.pack(pady=(0, 8))
         tk.Label(
-            card,
+            win,
             text="Please wait. Other buttons stay locked until this finishes.",
             bg="#0F2C52",
             fg="#9FB4CC",
             font=("TkDefaultFont", 12),
         ).pack()
-        blocker.lift()
-        self._model_progress_blocker = blocker
+
+        self._model_progress_win = win
         self._model_progress_bar = bar
         self._model_progress_label = label
+        self._model_progress_percent = percent
         self._model_progress_var = var
         self._model_progress_indeterminate = True
+
+        def _raise():
+            try:
+                if not win.winfo_exists():
+                    return
+                win.lift()
+                win.attributes("-topmost", True)
+                win.focus_force()
+            except Exception:
+                pass
+
+        win.update_idletasks()
+        _raise()
         try:
-            parent.update_idletasks()
+            win.grab_set()
         except Exception:
             pass
+        try:
+            win.update()
+        except Exception:
+            pass
+        win.after(50, _raise)
+        win.after(250, _raise)
 
     def _set_model_progress(self, current, total, message):
         label = getattr(self, "_model_progress_label", None)
@@ -1987,7 +2067,13 @@ class ExperimentApp:
             except Exception:
                 label = None
         self.status_var.set(message)
+        percent = getattr(self, "_model_progress_percent", None)
         if bar is None or var is None or total <= 0 or current <= 0:
+            if percent is not None and current <= 0:
+                try:
+                    percent.config(text="0%")
+                except Exception:
+                    pass
             return
         if getattr(self, "_model_progress_indeterminate", False):
             try:
@@ -1997,20 +2083,28 @@ class ExperimentApp:
                 pass
             self._model_progress_indeterminate = False
         try:
-            var.set(max(0, min(100, int(round(100 * current / total)))))
+            value = max(0, min(100, int(round(100 * current / total))))
+            var.set(value)
+            if percent is not None:
+                percent.config(text=f"{value}%")
         except Exception:
             pass
 
     def _close_model_progress(self):
-        blocker = getattr(self, "_model_progress_blocker", None)
-        self._model_progress_blocker = None
+        win = getattr(self, "_model_progress_win", None)
+        self._model_progress_win = None
         self._model_progress_bar = None
         self._model_progress_label = None
+        self._model_progress_percent = None
         self._model_progress_var = None
         self._model_progress_indeterminate = False
-        if blocker is not None:
+        if win is not None:
             try:
-                blocker.destroy()
+                win.grab_release()
+            except Exception:
+                pass
+            try:
+                win.destroy()
             except Exception:
                 pass
 
@@ -2048,7 +2142,7 @@ class ExperimentApp:
                 output_path,
                 on_progress=on_progress,
             )
-            done = f"Saved {os.path.basename(saved)} ({detected} detections)."
+            done = f"Saved {exp_name}/{os.path.basename(saved)} ({detected} detections)."
             self.root.after(0, lambda m=done: self._finish_model_job(True, m))
         except Exception as exc:
             err = str(exc)
@@ -2056,6 +2150,220 @@ class ExperimentApp:
                 0,
                 lambda e=err: self._finish_model_job(False, "Error while processing images.", e),
             )
+
+    def _latest_result_mosaic(self):
+        exp_path, exp_idx = self._latest_data_experiment()
+        if exp_path is None:
+            return None, None
+        exp_name = f"exp_{exp_idx:02d}"
+        mosaic = os.path.join(exp_path, f"{exp_name}_mosaic.png")
+        if not os.path.isfile(mosaic):
+            return exp_name, None
+        return exp_name, mosaic
+
+    def run_send_latest_image(self, parent):
+        if self.is_busy:
+            return
+        exp_name, mosaic_path = self._latest_result_mosaic()
+        if exp_name is None:
+            messagebox.showinfo(
+                "Send Image",
+                "No experiment folder was found in Data.",
+                parent=parent,
+            )
+            return
+        if not mosaic_path:
+            messagebox.showinfo(
+                "Send Image",
+                f"{exp_name} has no mosaic yet.\nRun Process Images first.",
+                parent=parent,
+            )
+            return
+        self._open_send_preview(parent, exp_name, mosaic_path)
+
+    def _open_send_preview(self, parent, exp_name, mosaic_path):
+        win = tk.Toplevel(parent)
+        win.title(f"Send {exp_name}")
+        win.configure(bg="#0F2C52")
+        win.resizable(False, False)
+        try:
+            win.transient(parent)
+            win.attributes("-topmost", True)
+        except Exception:
+            pass
+
+        sw = self.root.winfo_screenwidth()
+        sh = self.root.winfo_screenheight()
+        width = min(980, max(640, sw - 80))
+        height = min(760, max(520, sh - 80))
+        x = max(0, (sw - width) // 2)
+        y = max(0, (sh - height) // 2)
+        win.geometry(f"{width}x{height}+{x}+{y}")
+
+        tk.Label(
+            win,
+            text=exp_name,
+            bg="#0F2C52",
+            fg="white",
+            font=("TkDefaultFont", 20, "bold"),
+        ).pack(pady=(16, 4))
+        tk.Label(
+            win,
+            text=f"Location  {SEND_LATITUDE}, {SEND_LONGITUDE}",
+            bg="#0F2C52",
+            fg="#D6E4F5",
+            font=("TkDefaultFont", 13),
+        ).pack(pady=(0, 4))
+        tk.Label(
+            win,
+            text=f"Kit {SEND_DEVICE_ID}    User {SEND_USER_ID}",
+            bg="#0F2C52",
+            fg="#9FB4CC",
+            font=("TkDefaultFont", 12),
+        ).pack(pady=(0, 8))
+
+        image_label = tk.Label(win, text="Loading image...", bg="#0F2C52", fg="white", font=("TkDefaultFont", 14))
+        image_label.pack(pady=6)
+        status_label = tk.Label(win, text="", bg="#0F2C52", fg="#D6E4F5", font=("TkDefaultFont", 12))
+        status_label.pack(pady=(4, 8))
+
+        actions = tk.Frame(win, bg="#0F2C52")
+        actions.pack(pady=(4, 16))
+        send_btn = tk.Button(
+            actions,
+            text="Send to Server",
+            font=("TkDefaultFont", 14, "bold"),
+            bg="#166A3A",
+            fg="white",
+            activebackground="#1E8A4A",
+            padx=16,
+            pady=6,
+            command=lambda: self._start_send_image(win, send_btn, status_label, exp_name, mosaic_path),
+        )
+        send_btn.pack(side=tk.LEFT, padx=8)
+        win._send_btn = send_btn
+        win._send_status = status_label
+        tk.Button(
+            actions,
+            text="Cancel",
+            font=("TkDefaultFont", 14),
+            padx=16,
+            pady=6,
+            command=win.destroy,
+        ).pack(side=tk.LEFT, padx=8)
+
+        self._send_preview_win = win
+        win.update_idletasks()
+        try:
+            win.lift()
+            win.focus_force()
+        except Exception:
+            pass
+        win.after(20, lambda: self._fill_send_preview(win, image_label, mosaic_path, width - 48, height - 280))
+
+    def _fill_send_preview(self, win, image_label, mosaic_path, max_w, max_h):
+        try:
+            if not win.winfo_exists():
+                return
+        except Exception:
+            return
+        try:
+            img = Image.open(mosaic_path)
+            img.thumbnail((max(200, max_w), max(160, max_h)), Image.LANCZOS)
+            photo = ImageTk.PhotoImage(img)
+            image_label.config(image=photo, text="")
+            image_label.image = photo
+            win._preview_photo = photo
+        except Exception as exc:
+            image_label.config(text=f"Could not open image: {exc}")
+
+    def _start_send_image(self, win, send_btn, status_label, exp_name, mosaic_path):
+        if self.is_busy:
+            return
+        self._last_step_success = None
+        self.set_busy(True, f"Sending {exp_name}...")
+        try:
+            send_btn.config(state=tk.DISABLED, text="Sending...")
+            status_label.config(text="Sending image to the server...")
+        except Exception:
+            pass
+        self.write_log(f"Sending {exp_name} mosaic to server")
+        threading.Thread(
+            target=self._send_image_worker,
+            args=(exp_name, mosaic_path),
+            daemon=True,
+        ).start()
+
+    def _send_image_worker(self, exp_name, mosaic_path):
+        try:
+            import requests
+
+            with open(mosaic_path, "rb") as image_file:
+                response = requests.post(
+                    SEND_UPLOAD_URL,
+                    data={
+                        "device_id": SEND_DEVICE_ID,
+                        "user_id": SEND_USER_ID,
+                        "latitude": SEND_LATITUDE,
+                        "longitude": SEND_LONGITUDE,
+                        "status": "active",
+                        "sample_time": time.strftime("%Y-%m-%d %H:%M:%S"),
+                        "notes": exp_name,
+                    },
+                    files={"image": (os.path.basename(mosaic_path), image_file, "image/png")},
+                    timeout=180,
+                )
+            body = (response.text or "").strip()
+            if response.status_code != 200:
+                raise RuntimeError(f"Server status {response.status_code}: {body[:300]}")
+            try:
+                payload = response.json()
+            except Exception:
+                payload = {}
+            if payload.get("success") is False or (
+                not payload and '"success":false' in body.replace(" ", "").lower()
+            ):
+                raise RuntimeError(str(payload.get("error") or body[:300]))
+            if payload and payload.get("success") is not True:
+                raise RuntimeError(body[:300] or "Server did not confirm the upload.")
+            message = f"Sent {exp_name} to the server."
+            self.root.after(0, lambda m=message: self._finish_send_image(True, m))
+        except Exception as exc:
+            err = str(exc)
+            self.root.after(0, lambda e=err: self._finish_send_image(False, e))
+
+    def _finish_send_image(self, ok, message):
+        self._last_step_success = bool(ok)
+        preview = getattr(self, "_send_preview_win", None)
+        dialog_parent = getattr(self, "_run_experiment_popup", None)
+        try:
+            if dialog_parent is None or not dialog_parent.winfo_exists():
+                dialog_parent = self.root
+        except Exception:
+            dialog_parent = self.root
+        if ok:
+            self.write_log(message)
+            try:
+                if preview is not None and preview.winfo_exists():
+                    preview.destroy()
+            except Exception:
+                pass
+            self.set_busy(False, "Ready. Image sent.")
+            messagebox.showinfo("Send Image", message, parent=dialog_parent)
+        else:
+            self.write_log(f"ERROR: {message}")
+            try:
+                if preview is not None and preview.winfo_exists():
+                    send_btn = getattr(preview, "_send_btn", None)
+                    status_label = getattr(preview, "_send_status", None)
+                    if send_btn is not None:
+                        send_btn.config(state=tk.NORMAL, text="Send to Server")
+                    if status_label is not None:
+                        status_label.config(text="Send failed. You can try again.")
+            except Exception:
+                pass
+            self.set_busy(False, "Error while sending image.")
+            messagebox.showerror("Send Image", message, parent=dialog_parent)
 
     def run_drain_solenoid_pulse(self):
         if self.is_busy:
