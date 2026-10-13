@@ -1508,28 +1508,15 @@ class ExperimentApp:
                 )
                 next_slot += 1
 
-        for label, cmd in (
-            ("Sterilize_Assembly", self.run_sterilize_assembly_pulse),
-            ("Sterilize_Suction", self.run_sterilize_suction_pulse),
+        for label, cmd, color in (
+            ("Sterilize_Assembly", self.run_sterilize_assembly_pulse, (22, 98, 212)),
+            ("Sterilize_Suction", self.run_sterilize_suction_pulse, (22, 98, 212)),
+            ("Waste Solenoid 5 sec", self.run_waste_solenoid_pulse, (34, 124, 164)),
         ):
-            _place_grid_button(next_slot, label, cmd, (22, 98, 212))
+            _place_grid_button(next_slot, label, cmd, color)
             next_slot += 1
 
         section_row += (next_slot + 2) // 3
-
-        drain_btn = _make_rounded_button(
-            wrapper,
-            "Waste Solenoid 5 sec",
-            self.run_waste_solenoid_pulse,
-            width=step_btn_w,
-            height=step_btn_h,
-            radius=step_btn_radius,
-            bg_rgb=(34, 124, 164),
-            font_size=step_btn_font,
-            parent_bg="#E9EEF7",
-        )
-        drain_btn.grid(row=section_row, column=0, sticky="ew", padx=6, pady=6)
-        section_row += 1
 
         tk.Label(
             wrapper,
@@ -2465,11 +2452,11 @@ class ExperimentApp:
         try:
             if move_up:
                 self.write_log(f"Filter up: {steps} steps")
-                consumable_up(steps)
+                consumable_down(steps)
                 done = "Ready. Filter moved up."
             else:
                 self.write_log(f"Filter down: {steps} steps")
-                consumable_down(steps)
+                consumable_up(steps)
                 done = "Ready. Filter moved down."
             self._last_step_success = True
             self.root.after(0, lambda message=done: self.set_busy(False, message))
