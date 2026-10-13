@@ -2294,23 +2294,48 @@ class ExperimentApp:
             daemon=True,
         ).start()
 
+    def _upload_jpeg_copy(self, mosaic_path):
+        """Smaller JPEG so the server still receives device_id with the file."""
+        import tempfile
+
+        img = Image.open(mosaic_path).convert("RGB")
+        img.thumbnail((2000, 2000), Image.LANCZOS)
+        handle = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
+        handle.close()
+        img.save(handle.name, "JPEG", quality=80, optimize=True)
+        img.close()
+        return handle.name
+
     def _send_image_worker(self, exp_name, mosaic_path):
+        upload_path = None
         try:
             import requests
 
-            with open(mosaic_path, "rb") as image_file:
+            upload_path = self._upload_jpeg_copy(mosaic_path)
+            upload_name = f"{exp_name}_mosaic.jpg"
+            form = {
+                "device_id": str(SEND_DEVICE_ID).strip(),
+                "user_id": str(SEND_USER_ID).strip(),
+                "latitude": str(SEND_LATITUDE).strip(),
+                "longitude": str(SEND_LONGITUDE).strip(),
+                "status": "active",
+                "sample_time": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "notes": exp_name,
+            }
+            self.root.after(
+                0,
+                lambda: self.write_log(
+                    f"Upload fields device_id={form['device_id']} user_id={form['user_id']}"
+                ),
+            )
+            with open(upload_path, "rb") as image_file:
+                # Text parts are sent as form fields, not files, so PHP $_POST sees them.
+                parts = [(key, (None, value)) for key, value in form.items()]
+                parts.append(("image", (upload_name, image_file, "image/jpeg")))
                 response = requests.post(
                     SEND_UPLOAD_URL,
-                    data={
-                        "device_id": SEND_DEVICE_ID,
-                        "user_id": SEND_USER_ID,
-                        "latitude": SEND_LATITUDE,
-                        "longitude": SEND_LONGITUDE,
-                        "status": "active",
-                        "sample_time": time.strftime("%Y-%m-%d %H:%M:%S"),
-                        "notes": exp_name,
-                    },
-                    files={"image": (os.path.basename(mosaic_path), image_file, "image/png")},
+                    params=form,
+                    files=parts,
                     timeout=180,
                 )
             body = (response.text or "").strip()
@@ -2331,6 +2356,12 @@ class ExperimentApp:
         except Exception as exc:
             err = str(exc)
             self.root.after(0, lambda e=err: self._finish_send_image(False, e))
+        finally:
+            if upload_path and os.path.isfile(upload_path):
+                try:
+                    os.remove(upload_path)
+                except Exception:
+                    pass
 
     def _finish_send_image(self, ok, message):
         self._last_step_success = bool(ok)
