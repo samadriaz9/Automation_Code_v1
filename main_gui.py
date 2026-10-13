@@ -2200,6 +2200,11 @@ class ExperimentApp:
         y = max(0, (sh - height) // 2)
         win.geometry(f"{width}x{height}+{x}+{y}")
 
+        actions = tk.Frame(win, bg="#0F2C52")
+        actions.pack(side=tk.BOTTOM, fill=tk.X, pady=(8, 16))
+        status_label = tk.Label(win, text="", bg="#0F2C52", fg="#D6E4F5", font=("TkDefaultFont", 12))
+        status_label.pack(side=tk.BOTTOM, pady=(4, 0))
+
         tk.Label(
             win,
             text=exp_name,
@@ -2222,13 +2227,19 @@ class ExperimentApp:
             font=("TkDefaultFont", 12),
         ).pack(pady=(0, 8))
 
-        image_label = tk.Label(win, text="Loading image...", bg="#0F2C52", fg="white", font=("TkDefaultFont", 14))
-        image_label.pack(pady=6)
-        status_label = tk.Label(win, text="", bg="#0F2C52", fg="#D6E4F5", font=("TkDefaultFont", 12))
-        status_label.pack(pady=(4, 8))
+        preview_h = max(180, height - 280)
+        image_frame = tk.Frame(win, bg="#0F2C52", width=width - 40, height=preview_h)
+        image_frame.pack(pady=6)
+        image_frame.pack_propagate(False)
+        image_label = tk.Label(
+            image_frame,
+            text="Loading image...",
+            bg="#0F2C52",
+            fg="white",
+            font=("TkDefaultFont", 14),
+        )
+        image_label.pack(expand=True)
 
-        actions = tk.Frame(win, bg="#0F2C52")
-        actions.pack(pady=(4, 16))
         send_btn = tk.Button(
             actions,
             text="Send to Server",
@@ -2240,7 +2251,7 @@ class ExperimentApp:
             pady=6,
             command=lambda: self._start_send_image(win, send_btn, status_label, exp_name, mosaic_path),
         )
-        send_btn.pack(side=tk.LEFT, padx=8)
+        send_btn.pack(side=tk.LEFT, padx=24)
         win._send_btn = send_btn
         win._send_status = status_label
         tk.Button(
@@ -2253,13 +2264,18 @@ class ExperimentApp:
         ).pack(side=tk.LEFT, padx=8)
 
         self._send_preview_win = win
-        win.update_idletasks()
         try:
+            win.maxsize(width, height)
             win.lift()
             win.focus_force()
         except Exception:
             pass
-        win.after(20, lambda: self._fill_send_preview(win, image_label, mosaic_path, width - 48, height - 280))
+        win.after(
+            20,
+            lambda: self._fill_send_preview(
+                win, image_label, mosaic_path, width - 64, preview_h - 12
+            ),
+        )
 
     def _fill_send_preview(self, win, image_label, mosaic_path, max_w, max_h):
         try:
