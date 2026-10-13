@@ -99,6 +99,7 @@ def _make_rounded_button(
     return btn
 
 from camera_module import Camera_home, Camera_down, cleanup as camera_cleanup
+from consumables import consumable_up, consumable_down, cleanup as consumable_cleanup
 from filteration_flask import (
     Filteration_flask_up,
     filteration_flask_config,
@@ -196,6 +197,7 @@ def shutdown_all():
         ("media_dispensor", media_dispensor_cleanup),
         ("suction_pipe", suction_pipe_cleanup),
         ("incubator_lid", incubator_lid_cleanup),
+        ("consumable", consumable_cleanup),
     ):
         try:
             fn()
@@ -1336,12 +1338,13 @@ class ExperimentApp:
 
             popup.after(250, _poll_finish)
 
-        def _make_manual_step_button(parent, label, step_no, base_color=(22, 98, 212)):
+        def _make_manual_step_button(parent, label, step_no, base_color=(22, 98, 212), width=None):
+            btn_w = step_btn_w if width is None else width
             btn = _make_rounded_button(
                 parent,
                 label,
                 lambda n=step_no: _run_step_from_popup(n),
-                width=step_btn_w,
+                width=btn_w,
                 height=step_btn_h,
                 radius=step_btn_radius,
                 bg_rgb=base_color,
@@ -1349,13 +1352,13 @@ class ExperimentApp:
                 parent_bg="#E9EEF7",
             )
             btn._img_normal = _rounded_button_photo(
-                step_btn_w, step_btn_h, step_btn_radius, base_color, label, font_size=step_btn_font
+                btn_w, step_btn_h, step_btn_radius, base_color, label, font_size=step_btn_font
             )
             btn._img_running = _rounded_button_photo(
-                step_btn_w, step_btn_h, step_btn_radius, (214, 133, 18), label, font_size=step_btn_font
+                btn_w, step_btn_h, step_btn_radius, (214, 133, 18), label, font_size=step_btn_font
             )
             btn._img_done = _rounded_button_photo(
-                step_btn_w, step_btn_h, step_btn_radius, (24, 148, 86), label, font_size=step_btn_font
+                btn_w, step_btn_h, step_btn_radius, (24, 148, 86), label, font_size=step_btn_font
             )
             btn.config(image=btn._img_normal)
             btn.image = btn._img_normal
@@ -1371,12 +1374,40 @@ class ExperimentApp:
         ).grid(row=section_row, column=0, columnspan=3, sticky="w", padx=6, pady=(6, 4))
         section_row += 1
 
+        consumable_row = tk.Frame(wrapper, bg="#E9EEF7")
+        consumable_row.grid(row=section_row, column=0, columnspan=3, sticky="ew", pady=6)
+        consumable_btn_w = max(140, (step_btn_w * 3) // 4 - 12)
+        for col in range(4):
+            consumable_row.columnconfigure(col, weight=1)
+
         consumable_steps = [2, 3]  # Change Media, Adjust Syringe
         for i, step_no in enumerate(consumable_steps):
             label = self.step_labels[step_no - 1]
             consumable_color = (212, 126, 18) if step_no == 2 else (146, 72, 198)
-            btn = _make_manual_step_button(wrapper, label, step_no, base_color=consumable_color)
-            btn.grid(row=section_row, column=i, sticky="ew", padx=6, pady=6)
+            btn = _make_manual_step_button(
+                consumable_row, label, step_no, base_color=consumable_color, width=consumable_btn_w
+            )
+            btn.grid(row=0, column=i, sticky="ew", padx=6, pady=0)
+
+        for i, (label, command, color) in enumerate(
+            (
+                ("Filter Up", self.run_filter_up, (20, 130, 150)),
+                ("Filter Down", self.run_filter_down, (16, 96, 140)),
+            ),
+            start=2,
+        ):
+            btn = _make_rounded_button(
+                consumable_row,
+                label,
+                command,
+                width=consumable_btn_w,
+                height=step_btn_h,
+                radius=step_btn_radius,
+                bg_rgb=color,
+                font_size=step_btn_font,
+                parent_bg="#E9EEF7",
+            )
+            btn.grid(row=0, column=i, sticky="ew", padx=6, pady=0)
 
         insert_media_var = tk.StringVar(value="")
         tk.Label(
@@ -1385,7 +1416,7 @@ class ExperimentApp:
             background="#E9EEF7",
             foreground="#0E7A47",
             font=("TkDefaultFont", 15, "bold"),
-        ).grid(row=section_row, column=2, sticky="w", padx=6, pady=6)
+        ).grid(row=section_row + 1, column=0, columnspan=3, sticky="w", padx=6, pady=(0, 6))
 
         def _refresh_insert_media_label():
             try:
@@ -1403,7 +1434,7 @@ class ExperimentApp:
             popup.after(500, _refresh_insert_media_label)
 
         _refresh_insert_media_label()
-        section_row += 1
+        section_row += 2
 
         tk.Label(
             wrapper,
@@ -2414,6 +2445,38 @@ class ExperimentApp:
                 pass
             self.set_busy(False, "Error while sending image.")
             messagebox.showerror("Send Image", message, parent=dialog_parent)
+
+    def run_filter_up(self):
+        self._start_filter_move(True)
+
+    def run_filter_down(self):
+        self._start_filter_move(False)
+
+    def _start_filter_move(self, move_up):
+        if self.is_busy:
+            return
+        direction = "up" if move_up else "down"
+        self._last_step_success = None
+        self.set_busy(True, f"Filter moving {direction}...")
+        self.root.after(10, lambda up=move_up: self._filter_move_worker(up))
+
+    def _filter_move_worker(self, move_up):
+        steps = 1000
+        try:
+            if move_up:
+                self.write_log(f"Filter up: {steps} steps")
+                consumable_up(steps)
+                done = "Ready. Filter moved up."
+            else:
+                self.write_log(f"Filter down: {steps} steps")
+                consumable_down(steps)
+                done = "Ready. Filter moved down."
+            self._last_step_success = True
+            self.root.after(0, lambda message=done: self.set_busy(False, message))
+        except Exception as exc:
+            self._last_step_success = False
+            self.write_log(f"ERROR: {exc}")
+            self.root.after(0, lambda: self.set_busy(False, "Error while moving the filter."))
 
     def run_drain_solenoid_pulse(self):
         if self.is_busy:
