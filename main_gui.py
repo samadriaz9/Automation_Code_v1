@@ -141,6 +141,8 @@ from solinoid_value_drain import (
 )
 from solinoid_value_to_filteration import (
     solinoid_value_to_filteration,
+    solinoid_value_to_filteration_on,
+    solinoid_value_to_filteration_off,
     water_level_reached,
     cleanup as solenoid_cleanup,
 )
@@ -1405,8 +1407,8 @@ class ExperimentApp:
 
         consumable_row = tk.Frame(wrapper, bg="#E9EEF7")
         consumable_row.grid(row=section_row, column=0, columnspan=3, sticky="ew", pady=6)
-        consumable_btn_w = max(140, (step_btn_w * 3) // 4 - 12)
-        for col in range(4):
+        consumable_btn_w = max(120, (step_btn_w * 3) // 5 - 8)
+        for col in range(5):
             consumable_row.columnconfigure(col, weight=1)
 
         consumable_steps = [2, 3]  # Change Media, Adjust Syringe
@@ -1422,6 +1424,7 @@ class ExperimentApp:
             (
                 ("Filter Up", self.run_filter_up, (20, 130, 150)),
                 ("Filter Down", self.run_filter_down, (16, 96, 140)),
+                ("Filtration 5 sec", self.run_filtration_solenoid_pulse, (14, 140, 148)),
             ),
             start=2,
         ):
@@ -2495,6 +2498,31 @@ class ExperimentApp:
             self._last_step_success = False
             self.write_log(f"ERROR: {exc}")
             self.root.after(0, lambda: self.set_busy(False, "Error while moving the filter."))
+
+    def run_filtration_solenoid_pulse(self):
+        if self.is_busy:
+            return
+        self._last_step_success = None
+        self.set_busy(True, "Running filtration solenoid for 5 seconds...")
+        self.root.after(10, self._run_filtration_solenoid_pulse_worker)
+
+    def _run_filtration_solenoid_pulse_worker(self):
+        try:
+            self.write_log("Filtration solenoid: ON for 5 seconds")
+            solinoid_value_to_filteration_on()
+            time.sleep(5)
+            solinoid_value_to_filteration_off()
+            self._last_step_success = True
+            self.write_log("Filtration solenoid: OFF")
+            self.root.after(0, lambda: self.set_busy(False, "Ready. Filtration solenoid pulse completed."))
+        except Exception as exc:
+            self._last_step_success = False
+            try:
+                solinoid_value_to_filteration_off()
+            except Exception:
+                pass
+            self.write_log(f"ERROR: {exc}")
+            self.root.after(0, lambda: self.set_busy(False, "Error occurred during filtration solenoid pulse."))
 
     def run_drain_solenoid_pulse(self):
         if self.is_busy:
