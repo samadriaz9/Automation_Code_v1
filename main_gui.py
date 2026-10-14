@@ -1197,10 +1197,25 @@ class ExperimentApp:
             ms = _schedule_ms_for_run(k, n)
             if ms is None:
                 return
-            # Safety: Run 1st Experiment always executes the full experiment sequence.
-            selected_profile = [] if k == 1 else list(run_profiles.get(k, []))
+            selected_profile = list(run_profiles.get(k, []))
 
             def _start_run_now(run_id, profile):
+                if run_id == 1:
+                    self.write_log("Run 1: starting the kit sequence.")
+                    if profile:
+                        self.write_log(
+                            f"Run 1 incubation profile: {len(profile)} stage(s)."
+                        )
+                    else:
+                        self.write_log(
+                            "Run 1: no profile saved. Incubation will use 37 C for 1 minute."
+                        )
+                    self.set_busy(True, "Running 1st experiment...")
+                    self.root.after(
+                        10,
+                        lambda p=list(profile): self._run_first_experiment_worker(p),
+                    )
+                    return
                 if profile:
                     self.write_log(
                         f"Run {run_id}: using configured profile with {len(profile)} stage(s)."
@@ -1256,8 +1271,22 @@ class ExperimentApp:
                     self.root.after(60000, lambda ri=run_index: _run_sequence_item(ri))
                     return
                 self.write_log(f"Starting Run {run_index} Experiment.")
-                # Safety: Run 1st Experiment in sequence always uses full experiment flow.
-                selected_profile = [] if run_index == 1 else list(run_profiles.get(run_index, []))
+                selected_profile = list(run_profiles.get(run_index, []))
+                if run_index == 1:
+                    if selected_profile:
+                        self.write_log(
+                            f"Run 1 incubation profile: {len(selected_profile)} stage(s)."
+                        )
+                    else:
+                        self.write_log(
+                            "Run 1: no profile saved. Incubation will use 37 C for 1 minute."
+                        )
+                    self.set_busy(True, "Running 1st experiment...")
+                    self.root.after(
+                        10,
+                        lambda p=list(selected_profile): self._run_first_experiment_worker(p),
+                    )
+                    return
                 if selected_profile:
                     self.write_log(
                         f"Run {run_index}: using configured profile with {len(selected_profile)} stage(s)."
@@ -2343,11 +2372,12 @@ class ExperimentApp:
         img.close()
         return handle.name
 
-    def _send_image_worker(self, exp_name, mosaic_path):
+    def _post_mosaic(self, exp_name, mosaic_path):
+        """Upload one mosaic. Raises RuntimeError when the server does not accept it."""
+        import requests
+
         upload_path = None
         try:
-            import requests
-
             upload_path = self._upload_jpeg_copy(mosaic_path)
             upload_name = f"{exp_name}_mosaic.jpg"
             form = {
@@ -2359,11 +2389,8 @@ class ExperimentApp:
                 "sample_time": time.strftime("%Y-%m-%d %H:%M:%S"),
                 "notes": exp_name,
             }
-            self.root.after(
-                0,
-                lambda: self.write_log(
-                    f"Upload fields device_id={form['device_id']} user_id={form['user_id']}"
-                ),
+            self.write_log(
+                f"Upload fields device_id={form['device_id']} user_id={form['user_id']}"
             )
             with open(upload_path, "rb") as image_file:
                 # Text parts are sent as form fields, not files, so PHP $_POST sees them.
@@ -2388,17 +2415,21 @@ class ExperimentApp:
                 raise RuntimeError(str(payload.get("error") or body[:300]))
             if payload and payload.get("success") is not True:
                 raise RuntimeError(body[:300] or "Server did not confirm the upload.")
-            message = f"Sent {exp_name} to the server."
-            self.root.after(0, lambda m=message: self._finish_send_image(True, m))
-        except Exception as exc:
-            err = str(exc)
-            self.root.after(0, lambda e=err: self._finish_send_image(False, e))
+            return f"Sent {exp_name} to the server."
         finally:
             if upload_path and os.path.isfile(upload_path):
                 try:
                     os.remove(upload_path)
                 except Exception:
                     pass
+
+    def _send_image_worker(self, exp_name, mosaic_path):
+        try:
+            message = self._post_mosaic(exp_name, mosaic_path)
+            self.root.after(0, lambda m=message: self._finish_send_image(True, m))
+        except Exception as exc:
+            err = str(exc)
+            self.root.after(0, lambda e=err: self._finish_send_image(False, e))
 
     def _finish_send_image(self, ok, message):
         self._last_step_success = bool(ok)
@@ -2529,18 +2560,21 @@ class ExperimentApp:
             self.write_log(f"ERROR: {exc}")
             self.root.after(0, lambda: self.set_busy(False, "Error occurred during waste solenoid pulse."))
 
+    def _do_sterilize_assembly(self):
+        self.write_log("Sterilize_Assembly: positioning filtration unit/flask")
+        filteration_unit_config()
+        filteration_flask_config()
+        Filteration_flask_up(10)
+        Filteration_unit_up(850)
+        time.sleep(1)
+        self.write_log("Sterilize_Assembly: BTS ON for 5 seconds (I2C P3)")
+        run_sterilize_assembly(5)
+        self.write_log("Sterilize_Assembly: BTS OFF")
+
     def _run_sterilize_assembly_worker(self):
         try:
-            self.write_log("Sterilize_Assembly: positioning filtration unit/flask")
-            filteration_unit_config()
-            filteration_flask_config()
-            Filteration_flask_up(10)
-            Filteration_unit_up(850)
-            time.sleep(1)
-            self.write_log("Sterilize_Assembly: BTS ON for 5 seconds (I2C P3)")
-            run_sterilize_assembly(5)
+            self._do_sterilize_assembly()
             self._last_step_success = True
-            self.write_log("Sterilize_Assembly: BTS OFF")
             self.root.after(0, lambda: self.set_busy(False, "Ready. Sterilize_Assembly completed."))
         except Exception as exc:
             self._last_step_success = False
@@ -2551,7 +2585,7 @@ class ExperimentApp:
             self.write_log(f"ERROR: {exc}")
             self.root.after(0, lambda: self.set_busy(False, "Error occurred during Sterilize_Assembly."))
 
-    def _run_sterilize_suction_worker(self):
+    def _do_sterilize_suction(self):
         # --- tweak these ---
         bts_seconds = 5
         pump_up_steps = 580
@@ -2559,31 +2593,34 @@ class ExperimentApp:
         jog_count = 20
         jog_steps = 20
         # -------------------
-        try:
-            self.write_log(f"Sterilize_Suction: BTS ON for {bts_seconds} seconds (I2C P2)")
-            run_sterilize_suction(bts_seconds)
-            self.write_log("Sterilize_Suction: BTS OFF")
-            # Same PCF8574 @ 0x21 as suction_pipe limit — restore pins, then re-init pipe I2C.
-            restore_shared_expander()
-            suction_pipe_cleanup()
-            time.sleep(0.2)
+        self.write_log(f"Sterilize_Suction: BTS ON for {bts_seconds} seconds (I2C P2)")
+        run_sterilize_suction(bts_seconds)
+        self.write_log("Sterilize_Suction: BTS OFF")
+        # Same PCF8574 @ 0x21 as suction_pipe limit — restore pins, then re-init pipe I2C.
+        restore_shared_expander()
+        suction_pipe_cleanup()
+        time.sleep(0.2)
 
-            self.write_log("Sterilize_Suction: suction_pipe_home()")
-            suction_pipe_home()
-            self.write_log("Sterilize_Suction: suction_pump_home()")
-            suction_pump_home()
-            self.write_log(f"Sterilize_Suction: suction_pump_up({pump_up_steps})")
-            suction_pump_up(pump_up_steps)
-            self.write_log(f"Sterilize_Suction: suction_pipe_up({pipe_up_steps})")
-            suction_pipe_up(pipe_up_steps)
-            self.write_log(f"Sterilize_Suction: pump up/down x{jog_count} ({jog_steps} steps)")
-            for _ in range(jog_count):
-                suction_pump_up(jog_steps)
-                suction_pump_down(jog_steps)
-            self.write_log("Sterilize_Suction: suction_pipe_home() (final)")
-            suction_pipe_home()
+        self.write_log("Sterilize_Suction: suction_pipe_home()")
+        suction_pipe_home()
+        self.write_log("Sterilize_Suction: suction_pump_home()")
+        suction_pump_home()
+        self.write_log(f"Sterilize_Suction: suction_pump_up({pump_up_steps})")
+        suction_pump_up(pump_up_steps)
+        self.write_log(f"Sterilize_Suction: suction_pipe_up({pipe_up_steps})")
+        suction_pipe_up(pipe_up_steps)
+        self.write_log(f"Sterilize_Suction: pump up/down x{jog_count} ({jog_steps} steps)")
+        for _ in range(jog_count):
+            suction_pump_up(jog_steps)
+            suction_pump_down(jog_steps)
+        self.write_log("Sterilize_Suction: suction_pipe_home() (final)")
+        suction_pipe_home()
+        self.write_log("Sterilize_Suction: completed")
+
+    def _run_sterilize_suction_worker(self):
+        try:
+            self._do_sterilize_suction()
             self._last_step_success = True
-            self.write_log("Sterilize_Suction: completed")
             self.root.after(0, lambda: self.set_busy(False, "Ready. Sterilize_Suction completed."))
         except Exception as exc:
             self._last_step_success = False
@@ -2622,6 +2659,211 @@ class ExperimentApp:
         safe_h = h_txt.replace(".", "p")
         safe_t = t_txt.replace(".", "p")
         return f"{safe_h}hours{safe_t}degree"
+
+    def _pause_between_steps(self):
+        time.sleep(2)
+
+    def _pulse_named_solenoid(self, name, turn_on, turn_off):
+        self.write_log(f"{name}: ON for 5 seconds")
+        turn_on()
+        try:
+            time.sleep(5)
+        finally:
+            turn_off()
+        self.write_log(f"{name}: OFF")
+
+    def _mark_image_send(self, mosaic_path, sent, detail):
+        folder = os.path.dirname(mosaic_path) if mosaic_path else DATA_DIR
+        filename = "image_sent.txt" if sent else "image_not_sent.txt"
+        try:
+            os.makedirs(folder, exist_ok=True)
+            with open(os.path.join(folder, filename), "w", encoding="utf-8") as handle:
+                handle.write(time.strftime("%Y-%m-%d %H:%M:%S") + "\n" + detail + "\n")
+        except Exception as exc:
+            self.write_log(f"Could not write send marker: {exc}")
+        self._images_sent = bool(sent)
+        self.write_log("Images sent." if sent else "Images not sent.")
+
+    def _send_latest_mosaic_with_retries(self):
+        exp_name, mosaic_path = self._latest_result_mosaic()
+        if not mosaic_path:
+            self._mark_image_send(None, False, "No mosaic file to send.")
+            return
+        last_error = "not sent"
+        for attempt in range(1, 4):
+            self.status_var.set(f"Sending image, attempt {attempt}/3")
+            self.write_log(f"Send image attempt {attempt}/3")
+            try:
+                detail = self._post_mosaic(exp_name, mosaic_path)
+                self._mark_image_send(mosaic_path, True, detail)
+                return
+            except Exception as exc:
+                last_error = str(exc)
+                self.write_log(f"Send attempt {attempt}/3 failed: {last_error}")
+                if attempt < 3:
+                    self._pause_between_steps()
+        self._mark_image_send(mosaic_path, False, last_error)
+
+    def _process_latest_mosaic(self):
+        from modelimg import process_images_to_mosaic
+
+        exp_path, exp_idx = self._latest_data_experiment()
+        if exp_path is None:
+            raise RuntimeError("No experiment folder was found in Data.")
+        exp_name = f"exp_{exp_idx:02d}"
+        _image_dir, image_paths = self._experiment_image_set(exp_path)
+        if not image_paths:
+            raise RuntimeError(f"{exp_name} has no numbered pictures to process.")
+        output_path = os.path.join(exp_path, f"{exp_name}_mosaic.jpg")
+
+        def on_progress(current, total, message):
+            self.status_var.set(message)
+            self.root.update_idletasks()
+
+        saved, detected = process_images_to_mosaic(
+            image_paths,
+            output_path,
+            on_progress=on_progress,
+        )
+        self.write_log(f"Saved {os.path.basename(saved)} ({detected} detections).")
+
+    def _run_full_capacity_heat(self, minutes):
+        """Hold the heater on, without temperature control, for the given minutes."""
+        minutes = float(minutes)
+        duration_s = max(0.0, minutes * 60.0)
+        self.write_log(
+            f"Full-capacity heat for {minutes:.0f} min at petri home, then down 1085"
+        )
+        petri_dishes_home()
+        petri_dishes_down(1085)
+        set_relay(P1, True)
+        start = time.time()
+        try:
+            while True:
+                elapsed = time.time() - start
+                if elapsed >= duration_s:
+                    break
+                remain = max(0.0, duration_s - elapsed)
+                mins_left = int(remain // 60)
+                secs_left = int(remain % 60)
+                self.status_var.set(f"Full heat {mins_left:02d}:{secs_left:02d} left")
+                self.root.update_idletasks()
+                time.sleep(1)
+        finally:
+            try:
+                set_relay(P1, False)
+            except Exception:
+                pass
+        self.write_log("Full-capacity heat finished. Heater OFF.")
+
+    def _run_first_experiment_worker(self, profile):
+        try:
+            self.ensure_initialized()
+            stages = list(profile) if profile else [(37.0, 1.0)]
+            self.status_var.set("1st experiment: drain solenoid")
+            self._pulse_named_solenoid(
+                "Drain solenoid", solinoid_value_drain_on, solinoid_value_drain_off
+            )
+            self._pause_between_steps()
+            self._pulse_named_solenoid(
+                "Drain solenoid", solinoid_value_drain_on, solinoid_value_drain_off
+            )
+            self._pause_between_steps()
+
+            steps = (
+                ("All Module Home", self.step_1),
+                ("Load Filter Paper", self.step_5),
+                ("Send to Assembly", self.step_6),
+                ("Pick Media Pad", self.step_7),
+                ("Pour Media", self.step_8),
+                ("Pick Filtration Unit", self.step_9),
+                ("Pick Filter Paper", self.step_10),
+                ("Shift Incubation", self.step_11),
+            )
+            for label, step_fn in steps:
+                self.status_var.set(f"1st experiment: {label}")
+                self.write_log(f"Run 1: {label}")
+                step_fn()
+                self._pause_between_steps()
+
+            for idx, (target_temp, minutes) in enumerate(stages, start=1):
+                self.status_var.set(f"Incubation stage {idx}")
+                self.write_log(
+                    f"Run 1 stage {idx}: {float(target_temp):.1f} C for {float(minutes):.1f} min"
+                )
+                self._run_incubation(
+                    float(target_temp),
+                    float(minutes),
+                    stage_name=f"Run 1 stage {idx}",
+                )
+            self._pause_between_steps()
+
+            self.status_var.set("1st experiment: Start Pictures")
+            self.write_log("Run 1: Start Pictures")
+            self.step_13()
+            self._pause_between_steps()
+
+            self.status_var.set("1st experiment: Process Images")
+            self.write_log("Run 1: Process Images")
+            try:
+                self._process_latest_mosaic()
+            except Exception as exc:
+                self.write_log(f"Process Images failed: {exc}")
+            self._pause_between_steps()
+
+            self.status_var.set("1st experiment: Send Image")
+            self.write_log("Run 1: Send Image")
+            self._send_latest_mosaic_with_retries()
+            self._pause_between_steps()
+
+            self.status_var.set("1st experiment: full heat 20 min")
+            self._run_full_capacity_heat(20)
+
+            self.status_var.set("1st experiment: Trash Transfer")
+            self.write_log("Run 1: Trash Transfer")
+            self.step_14()
+            self._pause_between_steps()
+
+            self.status_var.set("1st experiment: Sterilize_Assembly")
+            self.write_log("Run 1: Sterilize_Assembly")
+            self._do_sterilize_assembly()
+            self._pause_between_steps()
+
+            self.status_var.set("1st experiment: Sterilize_Suction")
+            self.write_log("Run 1: Sterilize_Suction")
+            self._do_sterilize_suction()
+            self._pause_between_steps()
+
+            for pulse_no in range(1, 6):
+                self.status_var.set(f"Waste solenoid {pulse_no}/5")
+                self.write_log(f"Run 1: Waste solenoid pulse {pulse_no}/5")
+                self._pulse_named_solenoid(
+                    "Waste solenoid", solinoid_waste_on, solinoid_waste_off
+                )
+                if pulse_no < 5:
+                    self._pause_between_steps()
+
+            sent = "Images sent." if self._images_sent else "Images were not sent."
+            self.write_log(f"Run 1 complete. {sent}")
+            self.root.after(
+                0,
+                lambda message=sent: self.set_busy(False, f"Ready. 1st experiment completed. {message}"),
+            )
+        except Exception as exc:
+            try:
+                set_relay(P1, False)
+            except Exception:
+                pass
+            try:
+                solinoid_value_drain_off()
+            except Exception:
+                pass
+            try:
+                solinoid_waste_off()
+            except Exception:
+                pass
+            self.write_log(f"ERROR: {exc}")
+            self.root.after(0, lambda: self.set_busy(False, "Error occurred during 1st experiment."))
 
     def run_all_steps(self):
         if self.is_busy:
@@ -2835,7 +3077,7 @@ class ExperimentApp:
         filteration_unit_config()
         filteration_flask_config()
         petri_dishes_home()
-        petri_dishes_down(1100)
+        petri_dishes_down(1085)
         suction_pump_home()
         suction_pump_up(400)
 
@@ -2852,7 +3094,7 @@ class ExperimentApp:
         self.write_log("Step 4: Bring petri dishes home")
         incubator_lid_home()
         petri_dishes_home()
-        petri_dishes_down(1100)
+        petri_dishes_down(1085)
 
     def step_5(self):
         self.write_log("Step 5: Put filter paper on filtration flask")
@@ -2916,7 +3158,7 @@ class ExperimentApp:
         petri_dishes_down(300)
         Media_dispensor_down(800)
         time.sleep(2)
-        petri_dishes_down(800)
+        petri_dishes_down(785)
 
     def step_9(self):
         self.write_log("Step 9: Pick up filtration unit")
