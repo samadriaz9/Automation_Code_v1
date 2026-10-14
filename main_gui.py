@@ -10,6 +10,7 @@ import atexit
 import gc
 import glob
 import os
+import queue
 import signal
 import sys
 import threading
@@ -426,6 +427,10 @@ class ExperimentApp:
         self.initialized = False
         self._last_step_success = None
         self._run_experiment_popup = None
+        self._ui_thread = threading.get_ident()
+        self._ui_queue = queue.Queue()
+        self._run_thread = None
+        self.root.after(50, self._pump_ui_queue)
 
         self.steps = [
             self.step_1,
@@ -755,11 +760,68 @@ class ExperimentApp:
         self.btn_step.config(state=state)
         self.btn_camera.config(state=state)
         self.status_var.set(status_text)
+        try:
+            self.btn_close.config(state=tk.NORMAL)
+        except Exception:
+            pass
+
+    def _pump_ui_queue(self):
+        try:
+            while True:
+                fn = self._ui_queue.get_nowait()
+                try:
+                    fn()
+                except Exception as exc:
+                    print(f"UI task error: {exc}")
+        except queue.Empty:
+            pass
+        try:
+            self.root.after(50, self._pump_ui_queue)
+        except Exception:
+            pass
+
+    def _ui(self, fn):
+        if threading.get_ident() == self._ui_thread:
+            fn()
+        else:
+            self._ui_queue.put(fn)
+
+    def _call_on_ui(self, fn):
+        """Run fn on the Tk thread and wait. Safe to call from the experiment thread."""
+        if threading.get_ident() == self._ui_thread:
+            return fn()
+        box = {}
+        done = threading.Event()
+
+        def _job():
+            try:
+                box["value"] = fn()
+            except Exception as exc:
+                box["error"] = exc
+            finally:
+                done.set()
+
+        self._ui_queue.put(_job)
+        done.wait()
+        if "error" in box:
+            raise box["error"]
+        return box.get("value")
+
+    def _set_status(self, text):
+        self._ui(lambda t=text: self.status_var.set(t))
 
     def write_log(self, text):
-        self.log.insert(tk.END, text + "\n")
-        self.log.see(tk.END)
-        self.root.update_idletasks()
+        line = str(text) + "\n"
+
+        def _append():
+            try:
+                self.log.insert(tk.END, line)
+                self.log.see(tk.END)
+                self.root.update_idletasks()
+            except Exception:
+                pass
+
+        self._ui(_append)
 
     def ensure_initialized(self):
         if self.initialized:
@@ -946,6 +1008,12 @@ class ExperimentApp:
         ).grid(row=1, column=0, columnspan=3, sticky="w", padx=6, pady=(0, 10))
 
         def _close_popup():
+            running = self.is_busy or (
+                self._run_thread is not None and self._run_thread.is_alive()
+            )
+            if running:
+                self.on_exit()
+                return
             self._run_experiment_popup = None
             try:
                 popup.attributes("-fullscreen", False)
@@ -1213,10 +1281,7 @@ class ExperimentApp:
                             "Run 1: no profile saved. Incubation will use 37 C for 1 minute."
                         )
                     self.set_busy(True, "Running 1st experiment...")
-                    self.root.after(
-                        10,
-                        lambda p=list(profile): self._run_first_experiment_worker(p),
-                    )
+                    self._launch_first_experiment(profile)
                     return
                 if profile:
                     self.write_log(
@@ -1284,10 +1349,7 @@ class ExperimentApp:
                             "Run 1: no profile saved. Incubation will use 37 C for 1 minute."
                         )
                     self.set_busy(True, "Running 1st experiment...")
-                    self.root.after(
-                        10,
-                        lambda p=list(selected_profile): self._run_first_experiment_worker(p),
-                    )
+                    self._launch_first_experiment(selected_profile)
                     return
                 if selected_profile:
                     self.write_log(
@@ -2719,7 +2781,7 @@ class ExperimentApp:
             return
         last_error = "not sent"
         for attempt in range(1, 4):
-            self.status_var.set(f"Sending image, attempt {attempt}/3")
+            self._set_status(f"Sending image, attempt {attempt}/3")
             self.write_log(f"Send image attempt {attempt}/3")
             try:
                 detail = self._post_mosaic(exp_name, mosaic_path)
@@ -2745,8 +2807,7 @@ class ExperimentApp:
         output_path = os.path.join(exp_path, f"{exp_name}_mosaic.jpg")
 
         def on_progress(current, total, message):
-            self.status_var.set(message)
-            self.root.update_idletasks()
+            self._set_status(message)
 
         saved, detected = process_images_to_mosaic(
             image_paths,
@@ -2774,8 +2835,7 @@ class ExperimentApp:
                 remain = max(0.0, duration_s - elapsed)
                 mins_left = int(remain // 60)
                 secs_left = int(remain % 60)
-                self.status_var.set(f"Full heat {mins_left:02d}:{secs_left:02d} left")
-                self.root.update_idletasks()
+                self._set_status(f"Full heat {mins_left:02d}:{secs_left:02d} left")
                 time.sleep(1)
         finally:
             try:
@@ -2784,11 +2844,20 @@ class ExperimentApp:
                 pass
         self.write_log("Full-capacity heat finished. Heater OFF.")
 
+    def _launch_first_experiment(self, profile):
+        self._run_thread = threading.Thread(
+            target=self._run_first_experiment_worker,
+            args=(list(profile),),
+            name="run1-experiment",
+            daemon=True,
+        )
+        self._run_thread.start()
+
     def _run_first_experiment_worker(self, profile):
         try:
             self.ensure_initialized()
             stages = list(profile) if profile else [(37.0, 1.0)]
-            self.status_var.set("1st experiment: drain solenoid")
+            self._set_status("1st experiment: drain solenoid")
             self._pulse_named_solenoid(
                 "Drain solenoid", solinoid_value_drain_on, solinoid_value_drain_off
             )
@@ -2809,29 +2878,32 @@ class ExperimentApp:
                 ("Shift Incubation", self.step_11),
             )
             for label, step_fn in steps:
-                self.status_var.set(f"1st experiment: {label}")
+                self._set_status(f"1st experiment: {label}")
                 self.write_log(f"Run 1: {label}")
                 step_fn()
                 self._pause_between_steps()
 
             for idx, (target_temp, minutes) in enumerate(stages, start=1):
-                self.status_var.set(f"Incubation stage {idx}")
+                stage_temp = float(target_temp)
+                stage_minutes = float(minutes)
+                stage_name = f"Run 1 stage {idx}"
+                self._set_status(f"Incubation stage {idx}")
                 self.write_log(
-                    f"Run 1 stage {idx}: {float(target_temp):.1f} C for {float(minutes):.1f} min"
+                    f"Run 1 stage {idx}: {stage_temp:.1f} C for {stage_minutes:.1f} min"
                 )
-                self._run_incubation(
-                    float(target_temp),
-                    float(minutes),
-                    stage_name=f"Run 1 stage {idx}",
+                self._call_on_ui(
+                    lambda t=stage_temp, m=stage_minutes, name=stage_name: self._run_incubation(
+                        t, m, stage_name=name
+                    )
                 )
             self._pause_between_steps()
 
-            self.status_var.set("1st experiment: Start Pictures")
+            self._set_status("1st experiment: Start Pictures")
             self.write_log("Run 1: Start Pictures")
             self.step_13()
             self._pause_between_steps()
 
-            self.status_var.set("1st experiment: Process Images")
+            self._set_status("1st experiment: Process Images")
             self.write_log("Run 1: Process Images")
             try:
                 self._process_latest_mosaic()
@@ -2839,31 +2911,31 @@ class ExperimentApp:
                 self.write_log(f"Process Images failed: {exc}")
             self._pause_between_steps()
 
-            self.status_var.set("1st experiment: Send Image")
+            self._set_status("1st experiment: Send Image")
             self.write_log("Run 1: Send Image")
             self._send_latest_mosaic_with_retries()
             self._pause_between_steps()
 
-            self.status_var.set("1st experiment: full heat 20 min")
+            self._set_status("1st experiment: full heat 20 min")
             self._run_full_capacity_heat(20)
 
-            self.status_var.set("1st experiment: Trash Transfer")
+            self._set_status("1st experiment: Trash Transfer")
             self.write_log("Run 1: Trash Transfer")
             self.step_14()
             self._pause_between_steps()
 
-            self.status_var.set("1st experiment: Sterilize_Assembly")
+            self._set_status("1st experiment: Sterilize_Assembly")
             self.write_log("Run 1: Sterilize_Assembly")
             self._do_sterilize_assembly()
             self._pause_between_steps()
 
-            self.status_var.set("1st experiment: Sterilize_Suction")
+            self._set_status("1st experiment: Sterilize_Suction")
             self.write_log("Run 1: Sterilize_Suction")
             self._do_sterilize_suction()
             self._pause_between_steps()
 
             for pulse_no in range(1, 6):
-                self.status_var.set(f"Waste solenoid {pulse_no}/5")
+                self._set_status(f"Waste solenoid {pulse_no}/5")
                 self.write_log(f"Run 1: Waste solenoid pulse {pulse_no}/5")
                 self._pulse_named_solenoid(
                     "Waste solenoid", solinoid_waste_on, solinoid_waste_off
@@ -2873,9 +2945,8 @@ class ExperimentApp:
 
             sent = "Images sent." if self._images_sent else "Images were not sent."
             self.write_log(f"Run 1 complete. {sent}")
-            self.root.after(
-                0,
-                lambda message=sent: self.set_busy(False, f"Ready. 1st experiment completed. {message}"),
+            self._ui(
+                lambda message=sent: self.set_busy(False, f"Ready. 1st experiment completed. {message}")
             )
         except Exception as exc:
             try:
@@ -2891,7 +2962,7 @@ class ExperimentApp:
             except Exception:
                 pass
             self.write_log(f"ERROR: {exc}")
-            self.root.after(0, lambda: self.set_busy(False, "Error occurred during 1st experiment."))
+            self._ui(lambda: self.set_busy(False, "Error occurred during 1st experiment."))
 
     def run_all_steps(self):
         if self.is_busy:
@@ -3357,9 +3428,12 @@ class ExperimentApp:
                 temp_canvas.create_text(180, 280, text=f"{temp_c:.1f} / 50.0 C", fill="#10253F", font=("TkDefaultFont", 12))
                 time_canvas.create_text(180, 280, text=rem_var.get(), fill="#10253F", font=("TkDefaultFont", 12))
 
-                win.update_idletasks()
-                win.update()
-                time.sleep(poll_seconds)
+                # Keep Close responsive while this stage is on the window thread.
+                deadline = time.time() + poll_seconds
+                while time.time() < deadline:
+                    win.update_idletasks()
+                    win.update()
+                    time.sleep(0.05)
 
             self.write_log(f"{stage_name}: completed at {last_temp:.2f}C" if last_temp is not None else f"{stage_name}: completed")
         finally:
@@ -3472,8 +3546,18 @@ class ExperimentApp:
         self.write_log("Step 15: Sterilize (placeholder)")
 
     def on_exit(self):
-        shutdown_all()
-        self.root.destroy()
+        print("[Shutdown] Close pressed. Clearing all pins.")
+        try:
+            shutdown_all()
+        except Exception as exc:
+            print(f"[Shutdown] cleanup error: {exc}")
+        run_alive = self._run_thread is not None and self._run_thread.is_alive()
+        try:
+            self.root.destroy()
+        except Exception:
+            pass
+        if run_alive:
+            os._exit(0)
 
 
 def main():
