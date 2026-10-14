@@ -2835,7 +2835,7 @@ class ExperimentApp:
         filteration_unit_config()
         filteration_flask_config()
         petri_dishes_home()
-        petri_dishes_down(1050)
+        petri_dishes_down(1060)
         suction_pump_home()
         suction_pump_up(400)
 
@@ -2852,7 +2852,7 @@ class ExperimentApp:
         self.write_log("Step 4: Bring petri dishes home")
         incubator_lid_home()
         petri_dishes_home()
-        petri_dishes_down(1050)
+        petri_dishes_down(1060)
 
     def step_5(self):
         self.write_log("Step 5: Put filter paper on filtration flask")
@@ -2916,7 +2916,7 @@ class ExperimentApp:
         petri_dishes_down(300)
         Media_dispensor_down(800)
         time.sleep(2)
-        petri_dishes_down(750)
+        petri_dishes_down(760)
 
     def step_9(self):
         self.write_log("Step 9: Pick up filtration unit")
