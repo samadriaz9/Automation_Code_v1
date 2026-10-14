@@ -2933,7 +2933,7 @@ class ExperimentApp:
         upper_suction_pump_on(30)
         time.sleep(3)
         suction_pipe_down(670)
-        suction_pump_up(1805)
+        suction_pump_up(1810)
         suction_pipe_up(710)
         upper_suction_pump_off()
         time.sleep(3)
