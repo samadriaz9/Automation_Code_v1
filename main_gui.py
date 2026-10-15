@@ -3344,8 +3344,9 @@ class ExperimentApp:
         petri_dishes_home()
         petri_dishes_down(300)
         Media_dispensor_down(800)
-        time.sleep(2)
-        petri_dishes_down(785)
+        time.sleep(3)
+        petri_dishes_home()
+        petri_dishes_down(1085)
 
     def step_9(self):
         self.write_log("Step 9: Pick up filtration unit")
@@ -3362,7 +3363,7 @@ class ExperimentApp:
         upper_suction_pump_on(30)
         time.sleep(3)
         suction_pipe_down(670)
-        suction_pump_up(1810)
+        suction_pump_up(1815)
         suction_pipe_up(710)
         upper_suction_pump_off()
         time.sleep(3)
