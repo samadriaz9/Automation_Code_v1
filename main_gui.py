@@ -1337,8 +1337,9 @@ class ExperimentApp:
                         f"Run {run_id} incubation profile: {len(profile)} stage(s)."
                     )
                 else:
+                    _stages, fallback_text = self._fallback_incubation(run_id)
                     self.write_log(
-                        f"Run {run_id}: no profile saved. Incubation will use 37 C for 1 minute."
+                        f"Run {run_id}: no profile saved. Incubation will use {fallback_text}."
                     )
                 self.set_busy(True, f"Running {ordinal} experiment...")
                 self._launch_first_experiment(profile, run_id, advance_filter)
@@ -1384,8 +1385,9 @@ class ExperimentApp:
                         f"Run {run_index} incubation profile: {len(selected_profile)} stage(s)."
                     )
                 else:
+                    _stages, fallback_text = self._fallback_incubation(run_index)
                     self.write_log(
-                        f"Run {run_index}: no profile saved. Incubation will use 37 C for 1 minute."
+                        f"Run {run_index}: no profile saved. Incubation will use {fallback_text}."
                     )
                 self.set_busy(True, f"Running {ordinal} experiment...")
                 self._launch_first_experiment(selected_profile, run_index, run_index < n)
@@ -2918,12 +2920,21 @@ class ExperimentApp:
         self.write_log(f"Run {run_id}: Filter up {steps} steps for the next experiment")
         consumable_down(steps)
 
+    def _fallback_incubation(self, run_id):
+        """One incubation stage used when that run has no saved profile."""
+        if int(run_id) == 1:
+            return [(37.0, 1.0)], "37 C for 1 minute"
+        return [(37.0, 10.0 * 60.0)], "37 C for 10 hours"
+
     def _run_first_experiment_worker(self, profile, run_id=1, advance_filter_after=False):
         run_id = int(run_id)
         run_name = {1: "1st", 2: "2nd", 3: "3rd"}.get(run_id, f"{run_id}th")
         try:
             self.ensure_initialized()
-            stages = list(profile) if profile else [(37.0, 1.0)]
+            if profile:
+                stages = list(profile)
+            else:
+                stages, _fallback_text = self._fallback_incubation(run_id)
             self._set_status(f"{run_name} experiment: drain solenoid")
             self._pulse_named_solenoid(
                 "Drain solenoid", solinoid_value_drain_on, solinoid_value_drain_off
