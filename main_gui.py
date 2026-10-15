@@ -1112,8 +1112,8 @@ class ExperimentApp:
             prof_popup = tk.Toplevel(popup)
             self._apply_app_icon(prof_popup)
             prof_popup.title(f"Run {run_id} Profile Setup")
-            prof_popup.geometry("1020x620")
-            prof_popup.minsize(920, 560)
+            prof_popup.geometry("1020x700")
+            prof_popup.minsize(920, 640)
             prof_popup.transient(popup)
 
             frame = ttk.Frame(prof_popup, padding=12, style="App.TFrame")
@@ -1127,25 +1127,38 @@ class ExperimentApp:
             ttk.Label(frame, text="Temperature (C)", style="Status.TLabel").grid(
                 row=0, column=1, sticky="w", padx=6, pady=(4, 10)
             )
-            ttk.Label(frame, text="Incubation time before picture (min)", style="Status.TLabel").grid(
+            time_header = tk.StringVar(value="Incubation time before picture (min)")
+            ttk.Label(frame, textvariable=time_header, style="Status.TLabel").grid(
                 row=0, column=2, sticky="w", padx=6, pady=(4, 10)
             )
 
             temp_vars = []
             time_vars = []
             existing = run_profiles.get(run_id, [])
+            use_hours = tk.BooleanVar(value=False)
 
-            def _spinbox(parent, var, step, min_v, max_v, precision):
+            def _time_limits():
+                if use_hours.get():
+                    return 1.0, 0.0, 72.0, 2
+                return 1.0, 0.0, 4320.0, 0
+
+            def _spinbox(parent, var, step, min_v, max_v, precision, limits=None):
                 box = ttk.Frame(parent, style="App.TFrame")
                 box.columnconfigure(1, weight=1)
 
-                def _adjust(delta):
+                def _adjust(direction):
+                    if limits is not None:
+                        step_now, min_now, max_now, precision_now = limits()
+                    else:
+                        step_now, min_now, max_now, precision_now = step, min_v, max_v, precision
                     try:
                         value = float(var.get())
                     except Exception:
-                        value = float(min_v)
-                    value = max(float(min_v), min(float(max_v), value + delta))
-                    var.set(f"{value:.{precision}f}" if precision > 0 else f"{int(round(value))}")
+                        value = float(min_now)
+                    value = max(float(min_now), min(float(max_now), value + direction * float(step_now)))
+                    var.set(
+                        f"{value:.{int(precision_now)}f}" if int(precision_now) > 0 else f"{int(round(value))}"
+                    )
 
                 minus_btn = tk.Button(
                     box,
@@ -1155,7 +1168,7 @@ class ExperimentApp:
                     fg="white",
                     activebackground="#C44141",
                     font=("TkDefaultFont", 13, "bold"),
-                    command=lambda: _adjust(-step),
+                    command=lambda: _adjust(-1),
                 )
                 minus_btn.grid(row=0, column=0, padx=(0, 6))
 
@@ -1179,7 +1192,7 @@ class ExperimentApp:
                     fg="white",
                     activebackground="#187A4A",
                     font=("TkDefaultFont", 13, "bold"),
-                    command=lambda: _adjust(step),
+                    command=lambda: _adjust(1),
                 )
                 plus_btn.grid(row=0, column=2, padx=(6, 0))
                 return box
@@ -1202,16 +1215,38 @@ class ExperimentApp:
                 _spinbox(frame, t_var, step=0.5, min_v=10.0, max_v=50.0, precision=1).grid(
                     row=stage_no, column=1, sticky="w", padx=6, pady=8
                 )
-                _spinbox(frame, m_var, step=1, min_v=0, max_v=1440, precision=0).grid(
+                _spinbox(frame, m_var, step=1, min_v=0, max_v=4320, precision=0, limits=_time_limits).grid(
                     row=stage_no, column=2, sticky="w", padx=6, pady=8
+                )
+
+            def _toggle_hours():
+                show_hours = bool(use_hours.get())
+                was_hours = not show_hours
+                for m_var in time_vars:
+                    try:
+                        shown = float(m_var.get())
+                    except Exception:
+                        shown = 0.0
+                    minutes = shown * 60.0 if was_hours else shown
+                    minutes = max(0.0, min(4320.0, minutes))
+                    if show_hours:
+                        m_var.set(f"{minutes / 60.0:.2f}")
+                    else:
+                        m_var.set(f"{int(round(minutes))}")
+                time_header.set(
+                    "Incubation time before picture (hours)"
+                    if show_hours
+                    else "Incubation time before picture (min)"
                 )
 
             def _save_profile():
                 try:
                     profiles = []
+                    hours_mode = bool(use_hours.get())
                     for t_var, m_var in zip(temp_vars, time_vars):
                         temp = float(t_var.get().strip())
-                        mins = float(m_var.get().strip())
+                        shown = float(m_var.get().strip())
+                        mins = shown * 60.0 if hours_mode else shown
                         if mins > 0:
                             profiles.append((temp, mins))
                 except Exception:
@@ -1224,20 +1259,36 @@ class ExperimentApp:
                 run_profiles[run_id] = profiles
                 prof_popup.destroy()
 
+            hours_tick = tk.Checkbutton(
+                frame,
+                text="Enter time in hours",
+                variable=use_hours,
+                command=_toggle_hours,
+                bg="#E9EEF7",
+                fg="#0F2C52",
+                activebackground="#E9EEF7",
+                activeforeground="#0F2C52",
+                selectcolor="#FFFFFF",
+                font=("TkDefaultFont", 16, "bold"),
+                padx=8,
+                pady=4,
+            )
+            hours_tick.grid(row=6, column=0, columnspan=3, sticky="w", padx=6, pady=(10, 2))
+
             ttk.Label(
                 frame,
-                text="Each stage runs incubation (temp + time), then takes pictures.",
+                text="Each stage runs incubation (temp + time), then takes pictures. Tick hours to set the time in hours.",
                 style="Status.TLabel",
-            ).grid(row=6, column=0, columnspan=3, sticky="w", padx=6, pady=(6, 2))
+            ).grid(row=7, column=0, columnspan=3, sticky="w", padx=6, pady=(6, 2))
 
             btn_save = _make_rounded_button(
                 frame, "Save Profile", _save_profile, 260, 72, 24, (12, 158, 94), font_size=22, parent_bg="#E9EEF7"
             )
-            btn_save.grid(row=7, column=1, sticky="ew", pady=(12, 4), padx=6)
+            btn_save.grid(row=8, column=1, sticky="ew", pady=(12, 4), padx=6)
             btn_cancel = _make_rounded_button(
                 frame, "Cancel", prof_popup.destroy, 260, 72, 24, (212, 106, 9), font_size=22, parent_bg="#E9EEF7"
             )
-            btn_cancel.grid(row=7, column=2, sticky="ew", pady=(12, 4), padx=6)
+            btn_cancel.grid(row=8, column=2, sticky="ew", pady=(12, 4), padx=6)
 
         def _tear_down_popup():
             try:
