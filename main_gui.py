@@ -1486,7 +1486,7 @@ class ExperimentApp:
             (
                 ("Filter Up", self.run_filter_up, (20, 130, 150)),
                 ("Filter Down", self.run_filter_down, (16, 96, 140)),
-                ("Filtration 5 sec", self.run_filtration_solenoid_pulse, (14, 140, 148)),
+                ("Filtration 10 sec", self.run_filtration_solenoid_pulse, (14, 140, 148)),
             ),
             start=2,
         ):
@@ -2591,7 +2591,7 @@ class ExperimentApp:
             parent = self.root
         allowed = messagebox.askyesno(
             "Filtration solenoid",
-            "Start the filtration solenoid for 5 seconds?",
+            "Start the filtration solenoid for 10 seconds?",
             parent=parent,
         )
         if not allowed:
@@ -2599,14 +2599,14 @@ class ExperimentApp:
             self.write_log("Filtration solenoid was not started.")
             self.set_busy(False, "Ready. Filtration solenoid was not started.")
             return
-        self.set_busy(True, "Running filtration solenoid for 5 seconds...")
+        self.set_busy(True, "Running filtration solenoid for 10 seconds...")
         self.root.after(10, self._run_filtration_solenoid_pulse_worker)
 
     def _run_filtration_solenoid_pulse_worker(self):
         try:
-            self.write_log("Filtration solenoid: ON for 5 seconds")
+            self.write_log("Filtration solenoid: ON for 10 seconds")
             solinoid_value_to_filteration_on()
-            time.sleep(5)
+            time.sleep(10)
             solinoid_value_to_filteration_off()
             self._last_step_success = True
             self.write_log("Filtration solenoid: OFF")
