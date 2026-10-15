@@ -2565,6 +2565,40 @@ class ExperimentApp:
         if self.is_busy:
             return
         self._last_step_success = None
+        self.set_busy(True, "Moving filtration flask into position...")
+        self.root.after(10, self._prepare_filtration_solenoid)
+
+    def _prepare_filtration_solenoid(self):
+        try:
+            self.write_log("Filtration: positioning unit and flask")
+            filteration_unit_config()
+            filteration_flask_config()
+            Filteration_flask_up(1130)
+        except Exception as exc:
+            self._last_step_success = False
+            self.write_log(f"ERROR: {exc}")
+            self.root.after(0, lambda: self.set_busy(False, "Error while positioning the filtration flask."))
+            return
+        self.root.after(0, self._ask_start_filtration_solenoid)
+
+    def _ask_start_filtration_solenoid(self):
+        parent = self.root
+        popup = getattr(self, "_run_experiment_popup", None)
+        try:
+            if popup is not None and popup.winfo_exists():
+                parent = popup
+        except Exception:
+            parent = self.root
+        allowed = messagebox.askyesno(
+            "Filtration solenoid",
+            "Start the filtration solenoid for 5 seconds?",
+            parent=parent,
+        )
+        if not allowed:
+            self._last_step_success = False
+            self.write_log("Filtration solenoid was not started.")
+            self.set_busy(False, "Ready. Filtration solenoid was not started.")
+            return
         self.set_busy(True, "Running filtration solenoid for 5 seconds...")
         self.root.after(10, self._run_filtration_solenoid_pulse_worker)
 
