@@ -2595,7 +2595,7 @@ class ExperimentApp:
         self.root.after(10, lambda up=move_up: self._filter_move_worker(up))
 
     def _filter_move_worker(self, move_up):
-        steps = 100
+        steps = 50
         try:
             if move_up:
                 self.write_log(f"Filter up: {steps} steps")
@@ -3004,10 +3004,11 @@ class ExperimentApp:
             self._set_status("1st experiment: full heat 20 min")
             self._run_full_capacity_heat(20)
 
-            self._set_status("1st experiment: Trash Transfer")
-            self.write_log("Run 1: Trash Transfer")
-            self.step_14()
-            self._pause_between_steps()
+            for pass_no, item_name in ((1, "filter paper"), (2, "media pad")):
+                self._set_status(f"1st experiment: Trash Transfer {pass_no}/2 ({item_name})")
+                self.write_log(f"Run 1: Trash Transfer {pass_no}/2 ({item_name})")
+                self.step_14()
+                self._pause_between_steps()
 
             self._set_status("1st experiment: Sterilize_Assembly")
             self.write_log("Run 1: Sterilize_Assembly")
@@ -3019,13 +3020,13 @@ class ExperimentApp:
             self._do_sterilize_suction()
             self._pause_between_steps()
 
-            for pulse_no in range(1, 6):
-                self._set_status(f"Waste solenoid {pulse_no}/5")
-                self.write_log(f"Run 1: Waste solenoid pulse {pulse_no}/5")
+            for pulse_no in range(1, 11):
+                self._set_status(f"Waste solenoid {pulse_no}/10")
+                self.write_log(f"Run 1: Waste solenoid pulse {pulse_no}/10")
                 self._pulse_named_solenoid(
                     "Waste solenoid", solinoid_waste_on, solinoid_waste_off
                 )
-                if pulse_no < 5:
+                if pulse_no < 10:
                     self._pause_between_steps()
 
             sent = "Images sent." if self._images_sent else "Images were not sent."
