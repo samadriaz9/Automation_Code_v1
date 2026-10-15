@@ -1320,51 +1320,39 @@ class ExperimentApp:
                 return
             selected_profile = list(run_profiles.get(k, []))
 
-            def _start_run_now(run_id, profile):
-                if run_id == 1:
-                    self.write_log("Run 1: starting the kit sequence.")
-                    if profile:
-                        self.write_log(
-                            f"Run 1 incubation profile: {len(profile)} stage(s)."
-                        )
-                    else:
-                        self.write_log(
-                            "Run 1: no profile saved. Incubation will use 37 C for 1 minute."
-                        )
-                    self.set_busy(True, "Running 1st experiment...")
-                    self._launch_first_experiment(profile)
+            def _start_run_now(run_id, profile, advance_filter):
+                if self.is_busy:
+                    self.write_log(
+                        f"Run {run_id} waiting: previous experiment still running."
+                    )
+                    self.root.after(
+                        5000,
+                        lambda rid=run_id, p=list(profile), adv=advance_filter: _start_run_now(rid, p, adv),
+                    )
                     return
+                ordinal = {1: "1st", 2: "2nd", 3: "3rd"}.get(run_id, f"{run_id}th")
+                self.write_log(f"Run {run_id}: starting the kit sequence.")
                 if profile:
                     self.write_log(
-                        f"Run {run_id}: using configured profile with {len(profile)} stage(s)."
-                    )
-                    self.set_busy(True, f"Running experiment {run_id} profile...")
-                    self.root.after(
-                        10,
-                        lambda p=profile: self._run_incubate_and_picture_worker(p),
+                        f"Run {run_id} incubation profile: {len(profile)} stage(s)."
                     )
                 else:
-                    self.write_log(f"Run {run_id}: using default full experiment sequence.")
-                    self.root.after(50, self.run_all_steps)
+                    self.write_log(
+                        f"Run {run_id}: no profile saved. Incubation will use 37 C for 1 minute."
+                    )
+                self.set_busy(True, f"Running {ordinal} experiment...")
+                self._launch_first_experiment(profile, run_id, advance_filter)
 
-            if k == 1:
-                _tear_down_popup()
-                if ms <= 0:
-                    _start_run_now(k, selected_profile)
-                else:
-                    self.write_log(f"Run 1st Experiment scheduled in {ms / 3600000.0:.2f} h.")
-                    self.root.after(ms, lambda rid=k, p=selected_profile: _start_run_now(rid, p))
+            advance_filter = k < n
+            _tear_down_popup()
+            if ms <= 0:
+                _start_run_now(k, selected_profile, advance_filter)
             else:
-                _tear_down_popup()
-                delay_h = ms / 3600000.0
-                if ms <= 0:
-                    _start_run_now(k, selected_profile)
-                else:
-                    self.write_log(f"Run {k} Experiment scheduled in {delay_h:.2f} h.")
-                    self.root.after(
-                        ms,
-                        lambda rid=k, p=selected_profile: _start_run_now(rid, p),
-                    )
+                self.write_log(f"Run {k} Experiment scheduled in {ms / 3600000.0:.2f} h.")
+                self.root.after(
+                    ms,
+                    lambda rid=k, p=selected_profile, adv=advance_filter: _start_run_now(rid, p, adv),
+                )
 
         def _start_experiment_sequence():
             if self.is_busy:
@@ -1390,30 +1378,17 @@ class ExperimentApp:
                     return
                 self.write_log(f"Starting Run {run_index} Experiment.")
                 selected_profile = list(run_profiles.get(run_index, []))
-                if run_index == 1:
-                    if selected_profile:
-                        self.write_log(
-                            f"Run 1 incubation profile: {len(selected_profile)} stage(s)."
-                        )
-                    else:
-                        self.write_log(
-                            "Run 1: no profile saved. Incubation will use 37 C for 1 minute."
-                        )
-                    self.set_busy(True, "Running 1st experiment...")
-                    self._launch_first_experiment(selected_profile)
-                    return
+                ordinal = {1: "1st", 2: "2nd", 3: "3rd"}.get(run_index, f"{run_index}th")
                 if selected_profile:
                     self.write_log(
-                        f"Run {run_index}: using configured profile with {len(selected_profile)} stage(s)."
-                    )
-                    self.set_busy(True, f"Running experiment {run_index} profile...")
-                    self.root.after(
-                        10,
-                        lambda p=selected_profile: self._run_incubate_and_picture_worker(p),
+                        f"Run {run_index} incubation profile: {len(selected_profile)} stage(s)."
                     )
                 else:
-                    self.write_log(f"Run {run_index}: using default full experiment sequence.")
-                    self.root.after(50, self.run_all_steps)
+                    self.write_log(
+                        f"Run {run_index}: no profile saved. Incubation will use 37 C for 1 minute."
+                    )
+                self.set_busy(True, f"Running {ordinal} experiment...")
+                self._launch_first_experiment(selected_profile, run_index, run_index < n)
 
             _tear_down_popup()
             for i in range(n):
@@ -2929,20 +2904,27 @@ class ExperimentApp:
                 pass
         self.write_log("Full-capacity heat finished. Heater OFF.")
 
-    def _launch_first_experiment(self, profile):
+    def _launch_first_experiment(self, profile, run_id=1, advance_filter_after=False):
         self._run_thread = threading.Thread(
             target=self._run_first_experiment_worker,
-            args=(list(profile),),
-            name="run1-experiment",
+            args=(list(profile), int(run_id), bool(advance_filter_after)),
+            name=f"run{int(run_id)}-experiment",
             daemon=True,
         )
         self._run_thread.start()
 
-    def _run_first_experiment_worker(self, profile):
+    def _advance_filter_for_next_experiment(self, run_id):
+        steps = 160
+        self.write_log(f"Run {run_id}: Filter up {steps} steps for the next experiment")
+        consumable_down(steps)
+
+    def _run_first_experiment_worker(self, profile, run_id=1, advance_filter_after=False):
+        run_id = int(run_id)
+        run_name = {1: "1st", 2: "2nd", 3: "3rd"}.get(run_id, f"{run_id}th")
         try:
             self.ensure_initialized()
             stages = list(profile) if profile else [(37.0, 1.0)]
-            self._set_status("1st experiment: drain solenoid")
+            self._set_status(f"{run_name} experiment: drain solenoid")
             self._pulse_named_solenoid(
                 "Drain solenoid", solinoid_value_drain_on, solinoid_value_drain_off
             )
@@ -2963,18 +2945,18 @@ class ExperimentApp:
                 ("Shift Incubation", self.step_11),
             )
             for label, step_fn in steps:
-                self._set_status(f"1st experiment: {label}")
-                self.write_log(f"Run 1: {label}")
+                self._set_status(f"{run_name} experiment: {label}")
+                self.write_log(f"Run {run_id}: {label}")
                 step_fn()
                 self._pause_between_steps()
 
             for idx, (target_temp, minutes) in enumerate(stages, start=1):
                 stage_temp = float(target_temp)
                 stage_minutes = float(minutes)
-                stage_name = f"Run 1 stage {idx}"
+                stage_name = f"Run {run_id} stage {idx}"
                 self._set_status(f"Incubation stage {idx}")
                 self.write_log(
-                    f"Run 1 stage {idx}: {stage_temp:.1f} C for {stage_minutes:.1f} min"
+                    f"Run {run_id} stage {idx}: {stage_temp:.1f} C for {stage_minutes:.1f} min"
                 )
                 self._call_on_ui(
                     lambda t=stage_temp, m=stage_minutes, name=stage_name: self._run_incubation(
@@ -2983,56 +2965,63 @@ class ExperimentApp:
                 )
             self._pause_between_steps()
 
-            self._set_status("1st experiment: Start Pictures")
-            self.write_log("Run 1: Start Pictures")
+            self._set_status(f"{run_name} experiment: Start Pictures")
+            self.write_log(f"Run {run_id}: Start Pictures")
             self.step_13()
             self._pause_between_steps()
 
-            self._set_status("1st experiment: Process Images")
-            self.write_log("Run 1: Process Images")
+            self._set_status(f"{run_name} experiment: Process Images")
+            self.write_log(f"Run {run_id}: Process Images")
             try:
                 self._process_latest_mosaic()
             except Exception as exc:
                 self.write_log(f"Process Images failed: {exc}")
             self._pause_between_steps()
 
-            self._set_status("1st experiment: Send Image")
-            self.write_log("Run 1: Send Image")
+            self._set_status(f"{run_name} experiment: Send Image")
+            self.write_log(f"Run {run_id}: Send Image")
             self._send_latest_mosaic_with_retries()
             self._pause_between_steps()
 
-            self._set_status("1st experiment: full heat 20 min")
+            self._set_status(f"{run_name} experiment: full heat 20 min")
             self._run_full_capacity_heat(20)
 
             for pass_no, item_name in ((1, "filter paper"), (2, "media pad")):
-                self._set_status(f"1st experiment: Trash Transfer {pass_no}/2 ({item_name})")
-                self.write_log(f"Run 1: Trash Transfer {pass_no}/2 ({item_name})")
+                self._set_status(f"{run_name} experiment: Trash Transfer {pass_no}/2 ({item_name})")
+                self.write_log(f"Run {run_id}: Trash Transfer {pass_no}/2 ({item_name})")
                 self.step_14()
                 self._pause_between_steps()
 
-            self._set_status("1st experiment: Sterilize_Assembly")
-            self.write_log("Run 1: Sterilize_Assembly")
+            self._set_status(f"{run_name} experiment: Sterilize_Assembly")
+            self.write_log(f"Run {run_id}: Sterilize_Assembly")
             self._do_sterilize_assembly()
             self._pause_between_steps()
 
-            self._set_status("1st experiment: Sterilize_Suction")
-            self.write_log("Run 1: Sterilize_Suction")
+            self._set_status(f"{run_name} experiment: Sterilize_Suction")
+            self.write_log(f"Run {run_id}: Sterilize_Suction")
             self._do_sterilize_suction()
             self._pause_between_steps()
 
             for pulse_no in range(1, 11):
                 self._set_status(f"Waste solenoid {pulse_no}/10")
-                self.write_log(f"Run 1: Waste solenoid pulse {pulse_no}/10")
+                self.write_log(f"Run {run_id}: Waste solenoid pulse {pulse_no}/10")
                 self._pulse_named_solenoid(
                     "Waste solenoid", solinoid_waste_on, solinoid_waste_off
                 )
                 if pulse_no < 10:
                     self._pause_between_steps()
 
+            if advance_filter_after:
+                self._pause_between_steps()
+                self._set_status(f"{run_name} experiment: Filter up 160 steps")
+                self._advance_filter_for_next_experiment(run_id)
+
             sent = "Images sent." if self._images_sent else "Images were not sent."
-            self.write_log(f"Run 1 complete. {sent}")
+            self.write_log(f"Run {run_id} complete. {sent}")
             self._ui(
-                lambda message=sent: self.set_busy(False, f"Ready. 1st experiment completed. {message}")
+                lambda message=sent, name=run_name: self.set_busy(
+                    False, f"Ready. {name} experiment completed. {message}"
+                )
             )
         except Exception as exc:
             try:
@@ -3048,7 +3037,9 @@ class ExperimentApp:
             except Exception:
                 pass
             self.write_log(f"ERROR: {exc}")
-            self._ui(lambda: self.set_busy(False, "Error occurred during 1st experiment."))
+            self._ui(
+                lambda name=run_name: self.set_busy(False, f"Error occurred during {name} experiment.")
+            )
 
     def run_all_steps(self):
         if self.is_busy:
