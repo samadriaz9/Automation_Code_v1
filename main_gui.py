@@ -3343,8 +3343,8 @@ class ExperimentApp:
         self.write_log("Step 8: Pouring media")
         petri_dishes_home()
         petri_dishes_down(300)
-        Media_dispensor_down(800)
-        time.sleep(3)
+        Media_dispensor_down(700)
+        time.sleep(5)
         petri_dishes_home()
         petri_dishes_down(1085)
 
