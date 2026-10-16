@@ -2739,7 +2739,7 @@ class ExperimentApp:
 
     def _do_sterilize_suction(self):
         # --- tweak these ---
-        bts_seconds = 5
+        bts_seconds = 2
         pump_up_steps = 580
         pipe_up_steps = 1000
         jog_count = 20
